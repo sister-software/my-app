@@ -1,13 +1,11 @@
 import example from './example.mjs'
-import {MyButton} from '../../build/MyElement/index.js'
-
+import MyButton from '../../build/elements/my-button.js'
 
 function start() {
   // example()
 
   const app = new MyButton()
   document.body.appendChild(app)
-
 }
 
 if (document.readyState === 'loading') {
