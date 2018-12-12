@@ -6,7 +6,18 @@
   "repository": "git@github.com:nirrius/my-app.git",
   "author": "Nirrius LLC",
   "license": "MIT",
+  "scripts": {
+    "dev": "tsc --watch"
+  },
   "dependencies": {
+    "lit-html": "^0.14.0",
     "typescript": "^3.2.1"
+  },
+  "devDependencies": {
+    "prettier": "^1.15.3",
+    "tslint": "^5.11.0",
+    "tslint-config-prettier": "^1.17.0",
+    "tslint-config-standard": "^8.0.1",
+    "tslint-eslint-rules": "^5.4.0"
   }
 }
