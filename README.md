@@ -1,16 +1,23 @@
 # `<my-app />`
 
-__Web apps without build tools.__
+**Web apps without build tools.**
 
 **Unreleased work in progress**
 
 No Babel. No Webpack. MyApp lets you build with native custom HTML elements.
+
+```css
+:host {
+  --primary-color-base: #ff0000;
+}
+```
 
 ```html
 <!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
+    <link src="./theme.css" type="text/my-app-theme" />
     <!-- Add your modules as script tags. -->
     <script type='module' src="https://unpkg.com/nirrius/my-app/my-app.js"></script>
     <script type='module' src="https://unpkg.com/nirrius/my-app/my-element.js"></script>
@@ -62,7 +69,7 @@ No Babel. No Webpack. MyApp lets you build with native custom HTML elements.
 
       const myApp = new MyApp({
         // Observable data.
-        observable: {
+        sharable: {
           todos: {
             entries: [
               {id: 'abc123', title: 'Try MyApp', complete: true}
@@ -78,7 +85,8 @@ No Babel. No Webpack. MyApp lets you build with native custom HTML elements.
         },
         routes: {
           // Map routes to custom elements.
-          '/': TodoListPage
+          '/': TodoListPage,
+          login: LoginPage
         }
       })
 
@@ -86,6 +94,13 @@ No Babel. No Webpack. MyApp lets you build with native custom HTML elements.
     </script>
   </head>
 
-  <body></body>
+  <body>
+    <my-app>
+      <my-site-header>
+        <h1>Hello world!</h1>
+      </my-site-header>
+      <my-button>
+    </my-app>
+  </body>
 </html>
 ```

@@ -1,7 +1,7 @@
 import MyElement, { ParseCSS, ParseHTML } from './my-element.js'
 
 export default class MyButton extends MyElement {
-  static get data() {
+  static get properties() {
     return {
       clickCount: Number,
       label: String,

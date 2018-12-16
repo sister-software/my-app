@@ -12,18 +12,34 @@ export interface MyElementOptions {
   shadowRoot: ShadowRootInit
 }
 
-export type DataInitConstructorTypes = typeof Number | typeof String | typeof Boolean
+export type PropertyDescriptorConstructor = typeof Number | typeof String | typeof Boolean
 
 type DefaultValueGetter = () => any
 
-export interface DataInitDescriptor {
+export interface PropertyDescriptorSpec {
   required?: boolean
-  type: DataInitConstructorTypes
+  type: PropertyDescriptorConstructor
   defaultValue?: number | string | boolean | DefaultValueGetter
+  attributeName?: string
 }
 
-export interface MyElementDataInit {
-  [index: string]: DataInitConstructorTypes | DataInitDescriptor
+export class PropertyDescriptor {
+  propertyName: string
+  required: boolean
+  type: PropertyDescriptorConstructor
+  defaultValue?: number | string | boolean | DefaultValueGetter
+  attributeName: string
+  constructor(propertyName: string, spec: PropertyDescriptorSpec) {
+    this.propertyName = propertyName
+    this.required = !!spec.required
+    this.type = spec.type
+    this.defaultValue = spec.defaultValue
+    this.attributeName = camelToKebab(propertyName)
+  }
+}
+
+export interface PropertyDescriptorInit {
+  [propertyName: string]: PropertyDescriptorConstructor | PropertyDescriptorInit
 }
 
 export interface MyElementData {
@@ -33,6 +49,7 @@ export interface MyElementData {
 interface MyElement {
   styles?(css: ParseCSS): string
 }
+
 abstract class MyElement extends HTMLElement {
   // [index: string]: any
 
@@ -64,10 +81,29 @@ abstract class MyElement extends HTMLElement {
     `
   }
 
-  static get data(): MyElementDataInit {
-    return {
-      foo: Number
+  static get properties(): PropertyDescriptorInit {
+    return {}
+  }
+
+  static get propertyDescriptors() {
+    const { properties } = this
+    const propertyDescriptors: { [propertyName: string]: PropertyDescriptor } = {}
+
+    for (let propertyName in properties) {
+      let propertyDescriptorSpec: PropertyDescriptorSpec
+
+      if (typeof properties[propertyName] === 'function') {
+        propertyDescriptorSpec = {
+          type: properties[propertyName] as PropertyDescriptorConstructor
+        }
+      } else {
+        propertyDescriptorSpec = (properties[propertyName] as unknown) as PropertyDescriptorSpec
+      }
+
+      propertyDescriptors[propertyName] = new PropertyDescriptor(propertyName, propertyDescriptorSpec)
     }
+
+    return propertyDescriptors
   }
 
   abstract template(html: ParseHTML): TemplateResult
@@ -78,6 +114,7 @@ abstract class MyElement extends HTMLElement {
   }
 
   static register() {
+    this.setupObservedAttributes()
     customElements.define(this.elementName, this)
   }
 
@@ -96,7 +133,7 @@ abstract class MyElement extends HTMLElement {
 
   constructor() {
     super()
-    this.setupData()
+    this.setupDataAccessors()
     const shadowRoot = this.attachShadow(this._constructor.options.shadowRoot)
 
     shadowRoot.appendChild(this.styleElement)
@@ -107,24 +144,35 @@ abstract class MyElement extends HTMLElement {
   private trackedAttributeToProperty: { [index: string]: string } = {}
   private trackedPropertyToAttribute: { [index: string]: string } = {}
 
-  setupData() {
-    const { data } = this._constructor
-    const observedAttributes: string[] = []
+  static setupObservedAttributes() {
+    const { propertyDescriptors } = this
+    const observedAttributes = Object.keys(propertyDescriptors).map(
+      propertyName => propertyDescriptors[propertyName].attributeName
+    )
 
-    for (let propertyName in data) {
-      let propertyDescriptor: DataInitDescriptor
-
-      if (typeof data[propertyName] === 'function') {
-        propertyDescriptor = {
-          type: data[propertyName] as DataInitConstructorTypes
-        }
-      } else {
-        propertyDescriptor = data[propertyName] as DataInitDescriptor
+    Object.defineProperty(this, 'observedAttributes', {
+      enumerable: true,
+      get() {
+        return observedAttributes
       }
+    })
+  }
 
-      const attributeName = camelToKebab(propertyName)
-      observedAttributes.push(attributeName)
+  setAttribute(key: string, value: any) {
+    debugger
+    super.setAttribute(key, value)
+  }
 
+  // setPropertyFromAttribute(propertyName, attributeName) {
+
+  // }
+
+  setupDataAccessors() {
+    const { propertyDescriptors } = this._constructor
+
+    for (let propertyName in propertyDescriptors) {
+      const propertyDescriptor = propertyDescriptors[propertyName]
+      const { required, defaultValue, attributeName, type: convertToType } = propertyDescriptor
       this.trackedAttributeToProperty[attributeName] = propertyName
       this.trackedPropertyToAttribute[propertyName] = attributeName
 
@@ -135,7 +183,7 @@ abstract class MyElement extends HTMLElement {
         },
         set(value: any) {
           const self: MyElement = this // Fix TS's incomplete type inference.
-          const assignedValue = (self._data[propertyName] = propertyDescriptor.type(value))
+          const assignedValue = (self._data[propertyName] = convertToType(value))
 
           switch (typeof assignedValue) {
             case 'boolean':
@@ -155,14 +203,13 @@ abstract class MyElement extends HTMLElement {
         }
       })
 
-      const { required, defaultValue } = propertyDescriptor
-      let value: any = this.getAttribute(propertyName)
+      let value: any = this.getAttribute(attributeName)
 
       if (typeof value === 'undefined') {
         switch (typeof defaultValue) {
           case 'undefined':
             if (required) {
-              throw new Error(`${this._constructor.elementName}: property ${propertyName} is not defined.`)
+              throw new Error(`${this._constructor.elementName}: property ${propertyDescriptor} is not defined.`)
             }
             break
           case 'function':
@@ -177,19 +224,15 @@ abstract class MyElement extends HTMLElement {
         ;(this as any)[propertyName] = value
       }
     }
-
-    // TODO
-    Object.defineProperty(this._constructor, 'observedAttributes', {
-      enumerable: true,
-      get() {
-        return observedAttributes
-      }
-    })
   }
 
   attributeChangedCallback(attributeName: string, previousValue: string, currentValue: string) {
     console.log(attributeName, previousValue, currentValue)
-    // (this as any)[attributeName] = currentValue
+    // const propertyName = this.trackedAttributeToProperty[attributeName]
+    // if (!propertyName) return
+
+    // debugger
+    // ;(this as any)[propertyName] = currentValue
   }
 
   connectedCallback() {
