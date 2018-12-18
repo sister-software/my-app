@@ -5,6 +5,7 @@ function start() {
   // example()
 
   const app = new MyButton()
+  Object.assign(window, { app })
   document.body.appendChild(app)
 }
 

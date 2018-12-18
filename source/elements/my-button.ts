@@ -3,9 +3,11 @@ import MyElement, { ParseCSS, ParseHTML } from './my-element.js'
 export default class MyButton extends MyElement {
   static get properties() {
     return {
-      clickCount: Number,
-      label: String,
-      disabled: Boolean
+      clickCount: {
+        defaultValue: 4
+      },
+      label: {},
+      disabled: {}
     }
   }
 
@@ -19,7 +21,10 @@ export default class MyButton extends MyElement {
 
   template(html: ParseHTML) {
     return html`
-      <div>My Button goes here. <span @click=${this.clickHandler}>Click me!</span></div>
+      <div>
+        My Button goes here. <span @click=${this.clickHandler}>Click me!</span>
+        <div>Clicked ${(this as any).clickCount} times.</div>
+      </div>
     `
   }
 
