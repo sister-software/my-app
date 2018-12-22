@@ -1,5 +1,5 @@
 {
-  "name": "my-app",
+  "name": "@nirrius/my-app",
   "version": "0.0.1",
   "description": "Simpler web apps",
   "main": "index.js",
