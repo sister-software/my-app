@@ -13,19 +13,19 @@ export interface MyElementLifeCycle {
   /**
    * Callback executed before an element is inserted in the document.
    */
-  beforeElementInserted: (this: typeof MyElement) => void
+  beforeElementInserted: (this: typeof CustomElementBase) => void
   /**
    * Callback executed after an element is inserted in the document.
    */
-  afterElementInserted: (this: typeof MyElement) => void
+  afterElementInserted: (this: typeof CustomElementBase) => void
   /**
    * Callback executed before an element is removed from the document.
    */
-  beforeElementRemoved: (this: typeof MyElement) => void
+  beforeElementRemoved: (this: typeof CustomElementBase) => void
   /**
    * Callback executed after an element is removed from the document.
    */
-  afterElementRemoved: (this: typeof MyElement) => void
+  afterElementRemoved: (this: typeof CustomElementBase) => void
 }
 
 const defaultLifeCycleHandlers: MyElementLifeCycle = {
@@ -35,32 +35,30 @@ const defaultLifeCycleHandlers: MyElementLifeCycle = {
   afterElementRemoved: createNoop()
 }
 
-interface CustomElement {
+interface CustomElementBase {
   styles?: (css: ParseCSS) => string
   template(html: ParseHTML): TemplateResult
+  revokeAttributeCacheProxy: () => void
+  lifecycle: MyElementLifeCycle
+  attributes: any
+}
+abstract class CustomElementBase extends HTMLElement implements CustomElementBase {
+  connectedCallback() {
+    // this.lifecycle.afterElementInserted()
+  }
 }
 
 export interface CreateMyElementOptions {
   attributes?: string | MyElementAttribute
-  styles?: CustomElement['styles']
-  template: CustomElement['template']
+  styles?: CustomElementBase['styles']
+  template: CustomElementBase['template']
   lifecycle?: Partial<MyElementLifeCycle>
   shadowRoot?: ShadowRootInit
 }
 
-// A round-about way of making custom classes with a dynamic constructor name
-function createElementClass<T>(name: string, BaseClass: Function, prototype: T): T {
-  const Klass = new Function(
-    'name',
-    'BaseClass',
-    `
-    return class ${name} extends BaseClass {}
-  `
-  )(kebabToPascal(name), BaseClass)
-
-  Klass.prototype = prototype
-
-  return Klass
+interface AttributeCacheEntry {
+  private?: boolean
+  value: any
 }
 
 /**
@@ -68,7 +66,7 @@ function createElementClass<T>(name: string, BaseClass: Function, prototype: T):
  * @param elementName A unique name with dashes-between-words, or camelCased.
  * @param options Options describing your element's behavior.
  */
-function createElement<A>(elementName: string, options: CreateMyElementOptions): CustomElement {
+function createElement<A extends object = {}>(elementName: string, options: CreateMyElementOptions) {
   elementName = camelToKebab(elementName)
 
   if (elementName.indexOf('-') === -1) {
@@ -77,15 +75,45 @@ function createElement<A>(elementName: string, options: CreateMyElementOptions):
     )
   }
 
-  if (options.attributes) {
-    options.attributes
+  type AttributeCache = Record<keyof A, AttributeCacheEntry>
+
+  class CustomElement extends CustomElementBase {
+    attributeCache: AttributeCache = {} as AttributeCache
+    attributes: Record<keyof A, AttributeCacheEntry>
+
+    constructor() {
+      super()
+
+      const { proxy, revoke } = Proxy.revocable<AttributeCache>(this.attributeCache, {
+        get(obj, prop: keyof AttributeCache) {
+          return obj[prop]
+        }
+      })
+
+      this.revokeAttributeCacheProxy = revoke
+      this.attributes = proxy
+    }
   }
 
-  const CustomElement = createElementClass<CustomElement>(elementName, MyElement, {
-    template: options.template
-  })
+  CustomElement.prototype.template = options.template
 
   return CustomElement
 }
+
+interface TestAttributes {
+  foo: string
+  bar: number
+}
+
+const Foo = createElement<TestAttributes>('foo-bar', {
+  template(html) {
+    return html`
+      <div>Hello</div>
+    `
+  }
+})
+
+const instance = new Foo()
+instance.attributes.foo.value
 
 export default createElement
