@@ -31,7 +31,7 @@ interface CustomElementBase {
   template(html: ParseHTML): TemplateResult
   revokeAttributeCacheProxy: () => void
 }
-abstract class CustomElementBase<A = {}> extends HTMLElement implements CustomElementBase<A> {
+abstract class CustomElementBase<A = {}, E = {}> extends HTMLElement implements CustomElementBase<A>, E {
   attributeCache: Record<keyof A, AttributeCacheEntry>
   attributes: CustomElementBase<A>['attributeCache'] & NamedNodeMap
 
@@ -179,6 +179,20 @@ abstract class CustomElementBase<A = {}> extends HTMLElement implements CustomEl
     // TODO: serialize object attributes
 
     return super.outerHTML
+  }
+
+  cloneNode(deepOrOptions: boolean | { deep: boolean } = { deep: false }) {
+    if (typeof deepOrOptions === 'boolean') {
+      deepOrOptions = {
+        deep: deepOrOptions
+      }
+    }
+
+    const clone = super.cloneNode(deepOrOptions.deep)
+    // TODO: deep copy custom event functions
+    // TODO: Initialize attributes
+
+    return clone
   }
 
   // Hack to fix TypeScript's lack of constructor inference.
