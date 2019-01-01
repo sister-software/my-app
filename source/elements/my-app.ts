@@ -1,14 +1,24 @@
-import MyElement, { ParseHTML } from './my-element.js'
+// import { ParseHTML } from './my-element.js'
 
-class MyApp extends MyElement {
-  template(html: ParseHTML) {
-    return html`
-      <div class="my-app">
-        <h1>My app</h1>
-        <slot></slot>
-      </div>
-    `
-  }
-}
+// export interface MyElementAttribute {
+//   name: string
+//   private: boolean
+// }
 
-export default MyApp
+// export interface CreateElementOptions {
+//   attributes?: string | MyElementAttribute
+//   styles?: css
+// }
+
+// class MyApp {
+//   template(html: ParseHTML) {
+//     return html`
+//       <div class="my-app">
+//         <h1>My app</h1>
+//         <slot></slot>
+//       </div>
+//     `
+//   }
+// }
+
+// export default MyApp

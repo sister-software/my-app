@@ -1,6 +1,15 @@
-import MyElement, { ParseCSS, ParseHTML } from './my-element.js'
+import CustomElement, { ParseCSS, ParseHTML } from '../custom-element.js'
 
-export default class MyButton extends MyElement {
+interface MyButtonAttributes {
+  clickCount: number
+  label: string
+  disabled: boolean
+}
+
+export default class MyButton extends CustomElement<MyButtonAttributes> {
+  static get observedAttributes() {
+    return ['foo', 'click-count']
+  }
   static get properties() {
     return {
       clickCount: {
@@ -14,22 +23,24 @@ export default class MyButton extends MyElement {
   styles(css: ParseCSS) {
     return css`
       :host {
+        font-family: sans-serif;
+      }
+      span {
         color: red;
       }
     `
   }
+  clickHandler = (event: MouseEvent) => {
+    console.log('hello', this, event)
+    this.attributes.disabled = true
+  }
 
   template(html: ParseHTML) {
     return html`
-      <div>
-        My Button goes here. <span @click=${this.clickHandler}>Click me!</span>
-        <div>Clicked ${(this as any).clickCount} times.</div>
-      </div>
+      My Button goes here! <span @click=${this.clickHandler}>Click me!</span>
+      <div id="testing">Clicked ${this.attributes.clickCount} times.</div>
+      <slot></slot>
     `
-  }
-
-  clickHandler = (event: MouseEvent) => {
-    console.log('hello', this, event)
   }
 }
 
