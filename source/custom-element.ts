@@ -43,14 +43,47 @@ interface CustomElement<A> {
   styles?(css: ParseCSS): string
   template(html: ParseHTML): TemplateResult
 }
-abstract class CustomElement<A> extends HTMLElement implements CustomElement<A> {
+// LifeCycleHandler<A>
+interface CustomElementLifecycle<A> {
+  /**
+   * Public callback executed before an element is inserted in the document.
+   */
+  onbeforeinsert?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element is inserted in the document.
+   */
+  onafterinsert?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed before an element is removed from the document.
+   * Invoking `event.preventDefault()` will prevent element removal.
+   */
+  onbeforeremove?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element is removed from the document.
+   */
+  onafterremove?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed before an element's template is updated.
+   */
+  onbeforeupdate?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element's template is updated.
+   */
+  onafterupdate?: LifeCycleHandler<A>
+}
+
+abstract class CustomElement<A> extends HTMLElement implements CustomElement<A>, CustomElementLifecycle<A> {
   styleElement = document.createElement('style')
   contentElement = document.createElement('content-container')
 
   attributeCache: Record<keyof A, AttributeCacheEntry>
   attributesProxy: A & NamedNodeMap
   revokeAttributeCacheProxy: () => void
-
   // -- Styles
 
   static get defaultStyles() {
@@ -122,35 +155,11 @@ abstract class CustomElement<A> extends HTMLElement implements CustomElement<A> 
 
   // -- Events
 
-  /**
-   * Public callback executed before an element is inserted in the document.
-   */
-  onbeforeinsert: LifeCycleHandler<A> = null
-  /**
-   * Public callback executed after an element is inserted in the document.
-   */
-  onafterinsert: LifeCycleHandler<A> = null
-  /**
-   * Public callback executed before an element is removed from the document.
-   * Invoking `event.preventDefault()` will prevent element removal.
-   */
-  onbeforeremove: LifeCycleHandler<A> = null
-  /**
-   * Public callback executed after an element is removed from the document.
-   */
-  onafterremove: LifeCycleHandler<A> = null
-
-  /**
-   * Public callback executed before an element's template is updated.
-   */
-
-  onbeforeupdate: LifeCycleHandler<A> = null
-
-  /**
-   * Public callback executed after an element's template is updated.
-   */
-
-  onafterupdate: LifeCycleHandler<A> = null
+  onbeforeinsert = null
+  onafterinsert = null
+  onbeforeremove = null
+  onafterremove = null
+  onbeforeupdate = null
 
   /**
    * Called every time the element is inserted into the DOM.

@@ -30,6 +30,11 @@ export default class MyButton extends CustomElement<MyButtonAttributes> {
       }
     `
   }
+
+  onafterupdate() {
+    console.log(this.tagName, 'update ran')
+  }
+
   clickHandler = (event: MouseEvent) => {
     console.log('hello', this, event)
     this.attributes.disabled = true
