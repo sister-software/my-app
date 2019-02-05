@@ -1,55 +1,150 @@
-// The <web-component element is
+import { html, render, TemplateResult } from '../node_modules/lit-html/lit-html.js'
+import css from './helpers/parse-css.js'
+import camelToKebab from './helpers/camel-to-kebab.js'
+import kebabToCamel from './helpers/kebab-to-camel.js'
+import deepExtend from './helpers/deep-extend.js'
 
-const globalStyles = document.createElement('style')
+// Reexport for developer convenience.
+export { css }
+export { html }
+export type ParseHTML = typeof html
+export type ParseCSS = typeof css
 
-globalStyles.id = 'web-component-global-styles'
-globalStyles.innerHTML = `
-  web-component {
-    display: none !important;
-  }
+export type AttributeValue = number | string | boolean | Array<any> | object | null
 
-  observed-attribute {
-    display: none !important;
-  }
-`
-
-document.head.appendChild(globalStyles)
-
-class ObservedAttribute extends HTMLElement {
-  static observedAttributes() {
-    return ['name', 'type', 'required']
-  }
-
-  get name() {
-    return this.getAttribute('name')
-  }
-
-  get type() {
-    return this.getAttribute('type')
-  }
-
-  get required() {
-    return !!this.getAttribute('required')
-  }
-
-  defaultValue() {
-    return this.innerHTML
-  }
-
-  get attributeDefinition() {
-    return {
-      type: this.type,
-      required: this.required,
-      defaultValue: this.defaultValue
-    }
-  }
+export interface AttributeCacheEntry {
+  attributeName: string
+  value: any
+  type: AttributeDefinition['type']
 }
 
-abstract class WebComponent extends HTMLElement {
+type AttributeCache<A> = { [P in keyof A]: AttributeCacheEntry }
+
+/**
+ * Configures the attribute's expected type and value.
+ */
+export interface AttributeDefinition<C = any> {
+  /**
+   * A JSON friendly constructor function.
+   */
+  type: (...args: any[]) => C
+  defaultValue?: string | number | boolean | null | (() => any)
+  required?: boolean
+}
+
+export type AttributeDefinitions = {
+  [attributeName: string]: AttributeDefinition
+}
+
+/**
+ * This function doesn't really "do anything" at runtime, it's just the identity
+ * function. Its only purpose is to defeat TypeScript's type widening when providing
+ * attribute definition objects with varying type constructors.
+ *
+ * @param observedAttributes a set of attribute definitions
+ * @returns the same definitions that were passed in
+ */
+export function createObservedAttributes<T extends AttributeDefinitions>(observedAttributes: T): T {
+  return observedAttributes
+}
+
+export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: ReturnType<AD[P]['type']> }
+
+type ValueOfAttributes<A> = { [P in keyof A]: P }
+
+interface SetAttributeOptions {
+  parsed: boolean
+}
+
+export enum LifeCycleEvents {
+  beforeInsert = 'beforeinsert',
+  afterInsert = 'afterinsert',
+  beforeRemove = 'beforeremove',
+  afterRemove = 'afterremove',
+  beforeUpdate = 'beforeupdate',
+  afterUpdate = 'afterupdate'
+}
+
+export type LifeCycleHandler<A extends AttributeDefinitions> = ((this: WebComponent<A>, event: Event) => void) | null
+
+interface WebComponentLifecycle<A extends AttributeDefinitions> {
+  /**
+   * Public callback executed before an element is inserted in the document.
+   */
+  onbeforeinsert?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element is inserted in the document.
+   */
+  onafterinsert?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed before an element is removed from the document.
+   * Invoking `event.preventDefault()` will prevent element removal.
+   */
+  onbeforeremove?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element is removed from the document.
+   */
+  onafterremove?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed before an element's template is updated.
+   */
+  onbeforeupdate?: LifeCycleHandler<A>
+
+  /**
+   * Public callback executed after an element's template is updated.
+   */
+  onafterupdate?: LifeCycleHandler<A>
+}
+
+export interface CustomElementOptions {
+  shadowRoot: ShadowRootInit
+}
+
+export type WebComponentConstructorBody = (this: WebComponent) => void
+
+interface WebComponent<A extends AttributeDefinitions> {
+  styles?(css: ParseCSS): string
+  template(html: ParseHTML): TemplateResult
+  getAttribute(attributeName: keyof A & string): any
+}
+abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLElement
+  implements WebComponentLifecycle<A> {
+  /**
+   * A document wide unique dash-between words HTML tag name.
+   * e.g. `my-element`, `material-button`, `hero-image`
+   * */
+  static tagName: string
+
+  styleElement = document.createElement('style')
+  contentElement = document.createElement('content-container')
+
+  styles?(css: ParseCSS): string
+  // abstract template(html: ParseHTML): TemplateResult
+
+  /**
+   * Changes in observed attributes trigger template changes.
+   * JSON serializable values are recommended e.g. number, string, objects, arrays.
+   */
+  static observedAttributes?: AttributeDefinitions
+
+  /** An object containing each observed attribute.
+   * Note that only existing attributes may be changed.
+   */
+  public observedAttributes = {} as WithAttributes<A>
+
+  /**
+   * An internal cache containing attribute values.
+   */
+  private observedAttributesCache = {} as AttributeCache<A>
+
+  // -- Styles
+
   static get defaultStyles() {
-    // TODO: expose attributes as css variables.
-    // e.g. var(--attribute-foo-bar)
-    return `
+    return css`
       /* Default styles BEGIN */
       :host {
         display: block;
@@ -63,45 +158,390 @@ abstract class WebComponent extends HTMLElement {
       content-container {
         display: block;
       }
-
       /* Default styles END */
     `
   }
 
-  updateStyles() {
-    // if (typeof this.styles !== 'function') return
+  private updateStyles() {
+    let providedStyles = ''
+
+    if (typeof this.styles === 'function') {
+      providedStyles = this.styles(css)
+    }
 
     this.styleElement.innerHTML = [
       // TODO: Consider allowing adjustable default styles.
-      this._constructor.defaultStyles
-      // this.styles(css)
+      this._constructor.defaultStyles,
+      providedStyles
     ].join('\n')
   }
 
-  // static get options(): MyElementOptions {
-  static get options() {
-    return {
-      shadowRoot: { mode: 'closed' }
+  // -- Templating
+
+  private updateTemplate() {
+    this.templateAnimationFrame = null
+
+    const defaultPrevented = this.triggerEvent(LifeCycleEvents.beforeUpdate)
+
+    if (defaultPrevented) return
+
+    render(this.template(html), this.contentElement)
+
+    this.triggerEvent(LifeCycleEvents.afterUpdate)
+  }
+
+  templateAnimationFrame: Promise<{}> | null = null
+
+  /**
+   * Schedules an template update on next animation frame.
+   * Note that multiple attribute changes in the same frame will be batched in the same update.
+   */
+  async requestTemplateUpdate() {
+    if (this.templateAnimationFrame) {
+      return this.templateAnimationFrame
+    }
+
+    this.templateAnimationFrame = new Promise(resolve => {
+      requestAnimationFrame(() => {
+        this.updateTemplate()
+
+        resolve()
+      })
+    })
+  }
+
+  // -- Events
+
+  onbeforeinsert = null
+  onafterinsert = null
+  onbeforeremove = null
+  onafterremove = null
+  onbeforeupdate = null
+
+  /**
+   * Called every time the element is inserted into the DOM.
+   */
+  connectedCallback() {
+    const defaultPrevented = this.triggerEvent(LifeCycleEvents.beforeInsert)
+
+    if (defaultPrevented) return
+
+    this.updateStyles()
+    this.updateTemplate()
+
+    this.triggerEvent(LifeCycleEvents.afterInsert, {
+      cancelable: false
+    })
+  }
+
+  /**
+   * Called every time the element is removed from the DOM. Useful for running clean up code.
+   */
+  disconnectedCallback() {
+    this.triggerEvent(LifeCycleEvents.afterRemove, {
+      cancelable: false
+    })
+  }
+
+  /**
+   * Triggers custom events related to the element.
+   * @param eventName Lower case, single word event name.
+   * @param options An optional CustomEventInit object describing the event's behavior.
+   * @returns A boolean describing if the event was prevented by an event handler.
+   */
+  triggerEvent(eventName: string, options: CustomEventInit = {}) {
+    eventName = eventName.toLowerCase()
+    options = {
+      cancelable: true,
+      bubbles: true,
+      ...options
+    }
+
+    const event = new CustomEvent(eventName, options)
+    const propertyName = 'on' + eventName
+    const assignedHandler: LifeCycleHandler<A> = (this as any)[propertyName]
+
+    if (typeof assignedHandler === 'function') {
+      assignedHandler.call(this, event)
+
+      return event.defaultPrevented
+    }
+
+    return !this.dispatchEvent(event)
+  }
+
+  // --- Default HTMLElement overrides.
+
+  remove() {
+    const defaultPrevented = this.triggerEvent(LifeCycleEvents.beforeRemove)
+
+    if (!defaultPrevented) {
+      super.remove()
     }
   }
 
+  setAttribute(
+    attributeName: string,
+    value: ValueOfAttributes<A> | string,
+    options: SetAttributeOptions = { parsed: false }
+  ) {
+    const propertyName = kebabToCamel(attributeName) as keyof A
+    const attributeCacheEntry = this.observedAttributesCache[propertyName]
+
+    let parsedValue: any
+
+    if (options.parsed) {
+      parsedValue = value
+    } else {
+      try {
+        parsedValue = JSON.parse(value as string)
+      } catch (e) {
+        parsedValue = value
+      }
+    }
+
+    if (attributeCacheEntry.value === parsedValue) {
+      return value
+    }
+
+    const parsedValueType = typeof parsedValue
+
+    attributeCacheEntry.value = parsedValue
+    //attributeCacheEntry.assignedIn = 'attribute'
+
+    // TODO: fix attributeChanged loop.
+    if (parsedValueType === 'boolean') {
+      if (parsedValue) {
+        // Much like checkbox input elements,
+        // boolean attributes are represented by their presence.
+        super.setAttribute(attributeName, '')
+      } else {
+        super.removeAttribute(attributeName)
+      }
+    } else if (Array.isArray(parsedValue)) {
+      // parsedValue = this.createObservableArray(parsedValue)
+      super.setAttribute(attributeName, '[object Array]')
+    } else if (parsedValueType === 'object') {
+      if (parsedValue) {
+        // parsedValue = this.createObservableObject(parsedValue)
+        super.setAttribute(attributeName, parsedValue ? '[object Object]' : 'null')
+      } else {
+        super.setAttribute(attributeName, 'null')
+      }
+    } else {
+      super.setAttribute(attributeName, parsedValue as string)
+    }
+
+    attributeCacheEntry.value = parsedValue
+    //attributeCacheEntry.assignedIn = 'attribute'
+
+    this.requestTemplateUpdate()
+
+    return value
+  }
+
+  getAttribute(attributeName: keyof A & string): A[keyof A] | string | null {
+    const propertyName = kebabToCamel(attributeName) as keyof A
+
+    if (propertyName in this.observedAttributes) {
+      return this.observedAttributes[propertyName]
+    }
+
+    return super.getAttribute(attributeName)
+  }
+
+  removeAttribute(attributeName: string) {
+    super.removeAttribute(attributeName)
+
+    const propertyName = kebabToCamel(attributeName) as keyof A
+
+    if (propertyName in this.observedAttributes) {
+      const attributeCacheEntry = this.observedAttributes[propertyName]
+      if (typeof attributeCacheEntry.value === 'boolean') {
+        this.observedAttributes[propertyName] = false as any
+      }
+    }
+  }
+
+  attributeChangedCallback(attributeName: string, previousValue: string, currentValue: string) {
+    console.log('change', attributeName, previousValue, currentValue)
+  }
+
+  get outerHTML() {
+    // const clonedElement = this.cloneNode(true) as this
+    // TODO: serialize object attributes
+
+    return super.outerHTML
+  }
+
+  cloneNode(deepOrOptions: boolean | { deep: boolean } = { deep: false }) {
+    // Normalize to options object.
+    if (typeof deepOrOptions === 'boolean') {
+      deepOrOptions = {
+        deep: deepOrOptions
+      }
+    }
+
+    const clone = super.cloneNode(deepOrOptions.deep) as WebComponent<A>
+    clone.observedAttributesCache = deepExtend({}, this.observedAttributesCache) as WebComponent<
+      A
+    >['observedAttributesCache']
+
+    // for (let propertyName in clone.observedAttributesCache) {
+    //   clone.defineAttributeGetter(propertyName)
+    // }
+
+    return clone
+  }
+
   // Hack to fix TypeScript's lack of constructor inference.
-  // private get _constructor() {
-  get _constructor() {
-    return this.constructor
+  private get _constructor() {
+    return this.constructor as typeof WebComponent
+  }
+
+  static get options(): Partial<CustomElementOptions> {
+    return {}
+  }
+
+  static get defaultOptions(): CustomElementOptions {
+    return {
+      shadowRoot: { mode: 'open' }
+    }
+  }
+
+  static get optionsWithDefaults(): CustomElementOptions {
+    return deepExtend(this.defaultOptions, this.options)
+  }
+
+  private constructObservedAttributes() {
+    const attributeDefinitions = this._constructor.observedAttributes || {}
+
+    const defineAttributeGetter = (propertyName: keyof A) => {
+      Object.defineProperty(this.observedAttributes, propertyName, {
+        configurable: false,
+        enumerable: true,
+        get: () => this.observedAttributesCache[propertyName].value,
+        set: (value: ValueOfAttributes<A>) => this.setAttribute(propertyName as string, value)
+      })
+    }
+
+    for (let propertyName in attributeDefinitions) {
+      const attributeDefinition = attributeDefinitions[propertyName]
+
+      defineAttributeGetter(propertyName)
+
+      if (attributeDefinition.hasOwnProperty('defaultValue')) {
+        if (typeof attributeDefinition.defaultValue === 'function') {
+          this.observedAttributes[propertyName] = attributeDefinition.defaultValue() as any
+        } else {
+          this.observedAttributes[propertyName] = attributeDefinition.defaultValue as any
+        }
+      }
+    }
+
+    Object.seal(this.observedAttributes)
+    Object.seal(this.observedAttributesCache)
   }
 
   constructor() {
     super()
 
-    const shadowRoot = this.attachShadow(this._constructor.options.shadowRoot)
+    // -- Template lifecycle setup
 
-    this.styleElement = document.createElement('style')
-    this.contentElement = document.createElement('content-container')
+    const { optionsWithDefaults } = this._constructor
+    const shadowRoot = this.attachShadow(optionsWithDefaults.shadowRoot)
 
     shadowRoot.appendChild(this.styleElement)
     shadowRoot.appendChild(this.contentElement)
-    this.updateStyles()
+
+    this.constructObservedAttributes()
+  }
+
+  private static computedTagName() {
+    if (document.currentScript) {
+      const providedElementName = document.currentScript.getAttribute('element-name')
+
+      if (providedElementName) {
+        return providedElementName
+      }
+    }
+
+    if (this.tagName) {
+      return this.tagName
+    }
+
+    // Fallback to class function name.
+    return camelToKebab(this.name)
+  }
+
+  /**
+   * Registers custom element class with current document.
+   */
+  static register(targetWindow = window) {
+    const computedTagName = this.computedTagName()
+
+    const originalObservedAttributes = this.observedAttributes
+    const hasDefinedObservedAttributes =
+      typeof originalObservedAttributes === 'object' && !Array.isArray(originalObservedAttributes)
+    // Note the browser expects `observedAttributes` to be an array of during registration.
+    // We can temporarily transform the object definition to match that expectation.
+
+    if (hasDefinedObservedAttributes) {
+      delete this.observedAttributes
+
+      Object.defineProperty(this, 'observedAttributes', {
+        get() {
+          return Object.keys(originalObservedAttributes!)
+        },
+        configurable: true
+      })
+    }
+
+    try {
+      targetWindow.customElements.define(computedTagName, this)
+    } catch (error) {
+      console.warn(`${computedTagName}: Unable to register element.`, error)
+    }
+
+    if (hasDefinedObservedAttributes) {
+      delete this.observedAttributes
+
+      Object.defineProperty(this, 'observedAttributes', {
+        get() {
+          return originalObservedAttributes
+        },
+        configurable: true
+      })
+    }
+  }
+
+  static define(
+    tagName: string,
+    template: string,
+    styles: string = '',
+    constructorScript?: WebComponentConstructorBody
+  ) {
+    const Constructor = class extends WebComponent {
+      constructor() {
+        super()
+        // this.template = options.template
+        // this.styles = options.styles
+
+        if (constructorScript) {
+          constructorScript.call(this)
+        }
+      }
+    }
+
+    Constructor.tagName = tagName
+
+    try {
+      Constructor.register()
+    } catch (error) {
+      console.warn(`Could not register web component ${tagName}, error`)
+    }
+
+    return Constructor
   }
 
   /**
@@ -116,17 +556,15 @@ abstract class WebComponent extends HTMLElement {
    * Note that the `<script>` tag must always be the last child element.
    */
   static defineFromElement(parentElement: Element) {
-    const name = parentElement.getAttribute('name')
+    const tagName = parentElement.getAttribute('tag-name')
 
-    if (!name) {
-      throw new Error('Name attribute not provided. e.g. <web-component name="my-element></web-component>')
+    if (!tagName) {
+      throw new Error('Name attribute not provided. e.g. <web-component tag-name="my-element"></web-component>')
     }
 
-    const options = {
-      template: '',
-      styles: '',
-      constructorScript: function() {}
-    }
+    let template = ''
+    let styles = ''
+    let constructorScript = function() {} as Function
 
     for (let childElement of Array.from(parentElement.children)) {
       const serializer = document.createElement('div')
@@ -134,50 +572,24 @@ abstract class WebComponent extends HTMLElement {
       switch (childElement.nodeName) {
         case 'TEMPLATE':
           // Serialize the template fragment into HTML
-          serializer.appendChild(document.importNode(childElement.content, true))
+          serializer.appendChild(document.importNode((childElement as HTMLTemplateElement).content, true))
 
-          options.template = serializer.innerHTML
+          template = serializer.innerHTML
           break
 
         case 'STYLE':
-          options.styles = childElement.innerHTML
+          styles = childElement.innerHTML
           break
 
         case 'SCRIPT':
-          options.constructorScript = new Function(childElement.innerHTML)
+          constructorScript = new Function(childElement.innerHTML)
           break
       }
     }
 
-    parentElement.innerHTML = `<!--
-      ${parentElement.innerHTML}
-    -->`
-
     parentElement.setAttribute('defined', '')
 
-    const Constructor = class extends WebComponent {
-      constructor() {
-        super()
-        this.template = options.template
-        this.styles = options.styles
-
-        options.constructorScript.call(this)
-      }
-    }
-
-    try {
-      window.customElements.define(name, Constructor)
-    } catch (error) {
-      console.warn(`Could not register web component ${name}, error`)
-    }
-
-    try {
-      // Reveal constructor on element for debugging purposes.
-      parentElement.constructor = Constructor
-    } catch (error) {
-      console.error(error)
-    }
-
+    const Constructor = this.define(tagName, template, styles, constructorScript as WebComponentConstructorBody)
     return Constructor
   }
 
@@ -188,41 +600,15 @@ abstract class WebComponent extends HTMLElement {
 
     // const response = window.fetch(path)
   }
-
-  connectedCallback() {
-    // console.log('activated', this)
-  }
 }
 
-function observeWebComponents(target = document) {
-  const DOMObserver = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      if (mutation.type !== 'childList') return
+const readyEvent = new CustomEvent('WebComponentsReady', {
+  bubbles: true,
+  detail: { WebComponent }
+})
 
-      Array.from(mutation.addedNodes).forEach(addedNode => {
-        if (addedNode.nodeName !== 'WEB-COMPONENT') return
+export type ReadyEvent = typeof readyEvent
 
-        const src = (addedNode as Element).getAttribute('src')
+document.dispatchEvent(readyEvent)
 
-        if (src) {
-          WebComponent.defineFromSrc(src)
-          return
-        }
-
-        WebComponent.defineFromElement(addedNode as Element)
-      })
-    })
-  })
-
-  DOMObserver.observe(target, {
-    childList: true,
-    subtree: true,
-    attributes: false
-  })
-
-  return DOMObserver
-}
-
-function initializeWebComponents() {}
-
-observeWebComponents()
+export default WebComponent

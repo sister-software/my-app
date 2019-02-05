@@ -1,8 +1,8 @@
 {
-  "name": "@nirrius/my-app",
+  "name": "progressive-web-components",
   "version": "0.0.1",
   "description": "Simpler web apps",
-  "main": "index.js",
+  "main": "build/web-component.js",
   "repository": "git@github.com:nirrius/my-app.git",
   "author": "Nirrius LLC",
   "license": "MIT",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "lit-html": "^0.14.0",
-    "typescript": "^3.2.1"
+    "typescript": "^3.3.0"
   },
   "devDependencies": {
     "http-server": "^0.11.1",

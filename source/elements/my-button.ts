@@ -1,23 +1,22 @@
-import CustomElement, { ParseCSS, ParseHTML } from '../custom-element.js'
+import WebComponent, { ParseCSS, ParseHTML } from '../web-component.js'
 
-interface MyButtonAttributes {
-  clickCount: number
-  label: string
-  disabled: boolean
-}
-
-export default class MyButton extends CustomElement<MyButtonAttributes> {
-  static get observedAttributes() {
-    return ['foo', 'click-count']
-  }
-  static get properties() {
-    return {
-      clickCount: {
-        defaultValue: 4
-      },
-      label: {},
-      disabled: {}
+export default class MyButton extends WebComponent<typeof MyButton['observedAttributes']> {
+  static observedAttributes = {
+    clickCount: {
+      defaultValue: 23,
+      type: Number
+      // required: true
     }
+  }
+
+  static get elementsById() {
+    return {
+      foo: HTMLDivElement
+    }
+  }
+
+  static get publicEvents() {
+    return {}
   }
 
   styles(css: ParseCSS) {
@@ -37,13 +36,14 @@ export default class MyButton extends CustomElement<MyButtonAttributes> {
 
   clickHandler = (event: MouseEvent) => {
     console.log('hello', this, event)
-    this.attributes.disabled = true
+    // this.observedAttributes.disabled = true
   }
 
   template(html: ParseHTML) {
+    // const { clickCount } = this.observedAttributes
     return html`
       My Button goes here! <span @click=${this.clickHandler}>Click me!</span>
-      <div id="testing">Clicked ${this.attributes.clickCount} times.</div>
+      <div id="testing">Clicked ${this.observedAttributes.clickCount} times.</div>
       <slot></slot>
     `
   }
