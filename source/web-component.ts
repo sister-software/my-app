@@ -57,8 +57,8 @@ export interface CustomElementOptions {
 export type WebComponentConstructorBody<A extends AttributeDefinitions = {}> = (this: WebComponent, attributeDefinitions?: Partial<WithAttributes<A>>) => void
 
 interface WebComponent<A extends AttributeDefinitions> {
-  styles?(css: ParseCSS): string
-  template(html: ParseHTML): TemplateResult
+  styles?(this: WebComponent<A>, css: ParseCSS): string
+  template(this: WebComponent<A>, html: ParseHTML): TemplateResult
   getAttribute(attributeName: keyof A & string): any
 }
 abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLElement
@@ -564,38 +564,34 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
       throw new Error('Name attribute not provided. e.g. <web-component tag-name="my-element"></web-component>')
     }
 
-    let template: WebComponent<A>['template'] = function (html) { return html`` }
-    let styles: WebComponent<A>['styles']
-    let constructorScript = function() {} as Function
+    let template: WebComponent<A>['template'] = function template (html) { return html`` }
+    let styles: WebComponent<A>['styles'] = function styles (css) { return css`` }
+    let constructorScript: WebComponentConstructorBody<A> = function WebComponentConstructor() {}
 
     for (let childElement of Array.from(parentElement.children)) {
-      const serializer = document.createElement('div')
 
       switch (childElement.nodeName) {
         case 'TEMPLATE':
+          const serializer = document.createElement('div')
           // Serialize the template fragment into HTML
           serializer.appendChild(document.importNode((childElement as HTMLTemplateElement).content, true))
 
-          template = function template (html) {
-            return html`${serializer.innerHTML}`
-          }
+          template = new Function('html', `return html\`${serializer.innerHTML}\``) as typeof template
           break
 
         case 'STYLE':
-          styles = function styles (css) {
-            return css`${childElement.innerHTML}`
-          }
+          styles = new Function('css', `return css\`${childElement.innerHTML}\``) as typeof styles
           break
 
         case 'SCRIPT':
-          constructorScript = new Function(childElement.innerHTML)
+          constructorScript = new Function(childElement.innerHTML) as typeof constructorScript
           break
       }
     }
 
     parentElement.setAttribute('defined', '')
 
-    const Constructor = this.define(tagName, template, styles, constructorScript as WebComponentConstructorBody<A>)
+    const Constructor = this.define(tagName, template, styles, constructorScript)
     return Constructor
   }
 
