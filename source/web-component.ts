@@ -3,6 +3,8 @@ import css from './helpers/parse-css.js'
 import camelToKebab from './helpers/camel-to-kebab.js'
 import kebabToCamel from './helpers/kebab-to-camel.js'
 import deepExtend from './helpers/deep-extend.js'
+import {AttributeDefinitions, WithAttributes, AttributeCache, ValueOfAttributes, AttributeOrigin, AttributeCacheEntry} from './web-component/attributes.js';
+import {LifeCycleHandler, LifeCycleEvents} from './web-component/lifecycle.js';
 
 // Reexport for developer convenience.
 export { css }
@@ -10,62 +12,10 @@ export { html }
 export type ParseHTML = typeof html
 export type ParseCSS = typeof css
 
-export type AttributeValue = number | string | boolean | Array<any> | object | null
-
-export interface AttributeCacheEntry {
-  attributeName: string
-  value: any
-  type: AttributeDefinition['type']
-}
-
-type AttributeCache<A> = { [P in keyof A]: AttributeCacheEntry }
-
-/**
- * Configures the attribute's expected type and value.
- */
-export interface AttributeDefinition<C = any> {
-  /**
-   * A JSON friendly constructor function.
-   */
-  type: (...args: any[]) => C
-  defaultValue?: string | number | boolean | null | (() => any)
-  required?: boolean
-}
-
-export type AttributeDefinitions = {
-  [attributeName: string]: AttributeDefinition
-}
-
-/**
- * This function doesn't really "do anything" at runtime, it's just the identity
- * function. Its only purpose is to defeat TypeScript's type widening when providing
- * attribute definition objects with varying type constructors.
- *
- * @param observedAttributes a set of attribute definitions
- * @returns the same definitions that were passed in
- */
-export function createObservedAttributes<T extends AttributeDefinitions>(observedAttributes: T): T {
-  return observedAttributes
-}
-
-export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: ReturnType<AD[P]['type']> }
-
-type ValueOfAttributes<A> = { [P in keyof A]: P }
 
 interface SetAttributeOptions {
-  parsed: boolean
+  origin: AttributeOrigin
 }
-
-export enum LifeCycleEvents {
-  beforeInsert = 'beforeinsert',
-  afterInsert = 'afterinsert',
-  beforeRemove = 'beforeremove',
-  afterRemove = 'afterremove',
-  beforeUpdate = 'beforeupdate',
-  afterUpdate = 'afterupdate'
-}
-
-export type LifeCycleHandler<A extends AttributeDefinitions> = ((this: WebComponent<A>, event: Event) => void) | null
 
 interface WebComponentLifecycle<A extends AttributeDefinitions> {
   /**
@@ -104,7 +54,7 @@ export interface CustomElementOptions {
   shadowRoot: ShadowRootInit
 }
 
-export type WebComponentConstructorBody = (this: WebComponent) => void
+export type WebComponentConstructorBody<A extends AttributeDefinitions = {}> = (this: WebComponent, attributeDefinitions?: Partial<WithAttributes<A>>) => void
 
 interface WebComponent<A extends AttributeDefinitions> {
   styles?(css: ParseCSS): string
@@ -122,7 +72,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
   styleElement = document.createElement('style')
   contentElement = document.createElement('content-container')
 
-  styles?(css: ParseCSS): string
+  // styles?(css: ParseCSS): string
   // abstract template(html: ParseHTML): TemplateResult
 
   /**
@@ -283,31 +233,50 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
   setAttribute(
     attributeName: string,
     value: ValueOfAttributes<A> | string,
-    options: SetAttributeOptions = { parsed: false }
+    options: SetAttributeOptions = {
+      'origin': 'setAttribute'
+    }
   ) {
-    const propertyName = kebabToCamel(attributeName) as keyof A
-    const attributeCacheEntry = this.observedAttributesCache[propertyName]
 
-    let parsedValue: any
-
-    if (options.parsed) {
-      parsedValue = value
-    } else {
-      try {
-        parsedValue = JSON.parse(value as string)
-      } catch (e) {
-        parsedValue = value
-      }
+    if (!(attributeName in this.observedAttributes)) {
+      return super.setAttribute(attributeName, value as string)
     }
 
-    if (attributeCacheEntry.value === parsedValue) {
-      return value
+    const attributeCacheEntry = this.observedAttributesCache[attributeName]
+    const Constructor = attributeCacheEntry.type
+    let parsedValue: any
+    let cssValue: string = ""
+
+    // TODO: investigate cross-iframe concerns.
+    if (value instanceof attributeCacheEntry.type) {
+      parsedValue = value
+    } else {
+      value = value as string
+
+      switch (Constructor.name) {
+        case 'Number':
+        case 'Number':
+          super.setAttribute(attributeName, value)
+          break;
+        case 'Object':
+          parsedValue = eval(value)
+          super.setAttribute(attributeName, '[object Object]')
+        break;
+        case
+
+        default:
+        // parsedValue = new Constructor(value)
+        super.setAttribute(attributeName, `[object ${Constructor.name}]`)
+          break;
+      }
+
     }
 
     const parsedValueType = typeof parsedValue
 
+    attributeCacheEntry.origin = options.origin
     attributeCacheEntry.value = parsedValue
-    //attributeCacheEntry.assignedIn = 'attribute'
+    this.contentElement.style.setProperty(`--observed-attribute-${attributeName}`, cssValue)
 
     // TODO: fix attributeChanged loop.
     if (parsedValueType === 'boolean') {
@@ -333,7 +302,6 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     }
 
     attributeCacheEntry.value = parsedValue
-    //attributeCacheEntry.assignedIn = 'attribute'
 
     this.requestTemplateUpdate()
 
@@ -394,11 +362,6 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     return clone
   }
 
-  // Hack to fix TypeScript's lack of constructor inference.
-  private get _constructor() {
-    return this.constructor as typeof WebComponent
-  }
-
   static get options(): Partial<CustomElementOptions> {
     return {}
   }
@@ -416,19 +379,44 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
   private constructObservedAttributes() {
     const attributeDefinitions = this._constructor.observedAttributes || {}
 
-    const defineAttributeGetter = (propertyName: keyof A) => {
-      Object.defineProperty(this.observedAttributes, propertyName, {
+    const defineAttributeGetter = (propertyName: keyof A, attributeName: string) => {
+      const propertyDescriptor: PropertyDescriptor = {
         configurable: false,
-        enumerable: true,
         get: () => this.observedAttributesCache[propertyName].value,
         set: (value: ValueOfAttributes<A>) => this.setAttribute(propertyName as string, value)
+      }
+
+      // Property lookup (AKA camelCase)
+      Object.defineProperty(this.observedAttributes, propertyName, {
+        ...propertyDescriptor,
+        enumerable: true
+      })
+
+      // Attribute lookup (AKA dash-case)
+      Object.defineProperty(this.observedAttributes, attributeName, {
+        ...propertyDescriptor,
+        enumerable: false
       })
     }
 
     for (let propertyName in attributeDefinitions) {
       const attributeDefinition = attributeDefinitions[propertyName]
+      const attributeName = camelToKebab(propertyName)
 
-      defineAttributeGetter(propertyName)
+      const attributeCacheEntry: AttributeCacheEntry = {
+        origin: 'propertyAccessor',
+        type: attributeDefinition.type,
+        attributeName,
+        value: null
+      }
+
+      // Property lookup (AKA camelCase)
+      this.observedAttributesCache[propertyName] = attributeCacheEntry
+
+      // Attribute lookup (AKA dash-case)
+      this.observedAttributesCache[attributeName] = attributeCacheEntry
+
+      defineAttributeGetter(propertyName, attributeName)
 
       if (attributeDefinition.hasOwnProperty('defaultValue')) {
         if (typeof attributeDefinition.defaultValue === 'function') {
@@ -443,7 +431,12 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     Object.seal(this.observedAttributesCache)
   }
 
-  constructor() {
+  // Hack to fix TypeScript's lack of constructor inference.
+  private get _constructor() {
+    return this.constructor as typeof WebComponent
+  }
+
+  constructor(attributeDefinitions = {} as Partial<WithAttributes<A>>) {
     super()
 
     // -- Template lifecycle setup
@@ -515,20 +508,29 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     }
   }
 
-  static define(
+  /**
+   * Defines a simple Web Component.
+   * Consider extending the `WebComponent` class when in need of fine-grain control.
+   * @param tagName Globally unique tag name with at least one dash e.g. `"human-time"`, `"loading-bar"`
+   * @param template HTML template
+   * @param styles Stylesheet template
+   * @param constructorScript Constructor function invoked when the Web Component is inserted in the document
+   */
+  static define<A extends AttributeDefinitions = {}>(
     tagName: string,
-    template: string,
-    styles: string = '',
-    constructorScript?: WebComponentConstructorBody
+    template: WebComponent<A>['template'],
+    styles?: WebComponent<A>['styles'],
+    constructorScript?: WebComponentConstructorBody<A>
   ) {
-    const Constructor = class extends WebComponent {
-      constructor() {
-        super()
-        // this.template = options.template
-        // this.styles = options.styles
+    const Constructor = class extends WebComponent<A> {
+      constructor(attributeDefinitions = {} as Partial<WithAttributes<A>>) {
+        super(attributeDefinitions)
+
+        this.template = template
+        this.styles = styles
 
         if (constructorScript) {
-          constructorScript.call(this)
+          constructorScript.call(this, attributeDefinitions)
         }
       }
     }
@@ -555,15 +557,15 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
 ```
    * Note that the `<script>` tag must always be the last child element.
    */
-  static defineFromElement(parentElement: Element) {
+  static defineFromElement<A extends AttributeDefinitions = any>(parentElement: Element) {
     const tagName = parentElement.getAttribute('tag-name')
 
     if (!tagName) {
       throw new Error('Name attribute not provided. e.g. <web-component tag-name="my-element"></web-component>')
     }
 
-    let template = ''
-    let styles = ''
+    let template: WebComponent<A>['template'] = function (html) { return html`` }
+    let styles: WebComponent<A>['styles']
     let constructorScript = function() {} as Function
 
     for (let childElement of Array.from(parentElement.children)) {
@@ -574,11 +576,15 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
           // Serialize the template fragment into HTML
           serializer.appendChild(document.importNode((childElement as HTMLTemplateElement).content, true))
 
-          template = serializer.innerHTML
+          template = function template (html) {
+            return html`${serializer.innerHTML}`
+          }
           break
 
         case 'STYLE':
-          styles = childElement.innerHTML
+          styles = function styles (css) {
+            return css`${childElement.innerHTML}`
+          }
           break
 
         case 'SCRIPT':
@@ -589,16 +595,39 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
 
     parentElement.setAttribute('defined', '')
 
-    const Constructor = this.define(tagName, template, styles, constructorScript as WebComponentConstructorBody)
+    const Constructor = this.define(tagName, template, styles, constructorScript as WebComponentConstructorBody<A>)
     return Constructor
   }
 
-  static async defineFromSrc(path: string) {
+  /**
+   * Defines a Web Component from an external source.
+   * @param path URL path to web component definition e.g.
+   * https://example.com/components/foo-bar.component.html
+   */
+  static async defineFromSrc<A extends AttributeDefinitions = any>(path: string) {
     if (typeof path !== 'string' || !path.endsWith('component.html')) {
       throw new Error('Path must end with `.component.html`')
     }
 
-    // const response = window.fetch(path)
+    try {
+      var response = await window.fetch(path)
+
+      if (!response.ok) {
+        const responseText = await response.text()
+        throw new Error(`A server error occured during fetch: ${responseText}`)
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch external Web Component', path, response!)
+      throw error
+    }
+
+    const body = await response.text()
+
+
+    const serializer = document.createElement('div')
+    serializer.innerHTML = body
+
   }
 }
 
