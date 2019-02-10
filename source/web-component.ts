@@ -4,7 +4,7 @@ import camelToKebab from './helpers/camel-to-kebab.js'
 import kebabToCamel from './helpers/kebab-to-camel.js'
 import deepExtend from './helpers/deep-extend.js'
 import {AttributeDefinitions, WithAttributes, AttributeCache, ValueOfAttributes, AttributeOrigin, AttributeCacheEntry} from './web-component/attributes.js';
-import {LifeCycleHandler, LifeCycleEvents} from './web-component/lifecycle.js';
+import {LifeCycleHandler, LifeCycleEvents, WebComponentLifecycle} from './web-component/lifecycle.js';
 
 // Reexport for developer convenience.
 export { css }
@@ -15,39 +15,6 @@ export type ParseCSS = typeof css
 
 interface SetAttributeOptions {
   origin: AttributeOrigin
-}
-
-interface WebComponentLifecycle<A extends AttributeDefinitions> {
-  /**
-   * Public callback executed before an element is inserted in the document.
-   */
-  onbeforeinsert?: LifeCycleHandler<A>
-
-  /**
-   * Public callback executed after an element is inserted in the document.
-   */
-  onafterinsert?: LifeCycleHandler<A>
-
-  /**
-   * Public callback executed before an element is removed from the document.
-   * Invoking `event.preventDefault()` will prevent element removal.
-   */
-  onbeforeremove?: LifeCycleHandler<A>
-
-  /**
-   * Public callback executed after an element is removed from the document.
-   */
-  onafterremove?: LifeCycleHandler<A>
-
-  /**
-   * Public callback executed before an element's template is updated.
-   */
-  onbeforeupdate?: LifeCycleHandler<A>
-
-  /**
-   * Public callback executed after an element's template is updated.
-   */
-  onafterupdate?: LifeCycleHandler<A>
 }
 
 export interface CustomElementOptions {
