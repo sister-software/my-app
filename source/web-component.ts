@@ -1,7 +1,6 @@
 import { html, render, TemplateResult } from '../node_modules/lit-html/lit-html.js'
 import css from './helpers/parse-css.js'
 import camelToKebab from './helpers/camel-to-kebab.js'
-import kebabToCamel from './helpers/kebab-to-camel.js'
 import deepExtend from './helpers/deep-extend.js'
 import {
   AttributeDefinitions,
@@ -24,21 +23,28 @@ interface SetAttributeOptions {
   origin: AttributeOrigin
 }
 
+export interface ElementRefDefinitions {
+  [elementId: string]: new (...args: any[]) => HTMLElement | SVGElement
+}
+
+export type WithElementRefs<T extends ElementRefDefinitions> = { [P in keyof T]: InstanceType<T[P]> | null }
+
 export interface CustomElementOptions {
   shadowRoot: ShadowRootInit
 }
 
-export type WebComponentConstructorBody<A extends AttributeDefinitions = {}> = (
-  this: WebComponent<A>,
+export type WebComponentConstructorBody<A extends AttributeDefinitions = {}, E extends ElementRefDefinitions = {}> = (
+  this: WebComponent<A, E>,
   attributeDefinitions?: Partial<WithAttributes<A>>
 ) => void
 
-interface WebComponent<A extends AttributeDefinitions> {
-  styles?(this: WebComponent<A>, css: ParseCSS): string
-  template(this: WebComponent<A>, html: ParseHTML): TemplateResult
+interface WebComponent<A extends AttributeDefinitions, E extends ElementRefDefinitions = {}> {
+  styles?(this: WebComponent<A, E>, css: ParseCSS): string
+  template(this: WebComponent<A, E>, html: ParseHTML): TemplateResult
   getAttribute(attributeName: keyof A & string): any
 }
-abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLElement
+abstract class WebComponent<A extends AttributeDefinitions = {}, E extends ElementRefDefinitions = {}>
+  extends HTMLElement
   implements WebComponentLifecycle<A> {
   /**
    * A document wide unique dash-between words HTML tag name.
@@ -46,20 +52,18 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
    * */
   static tagName: string
 
-  styleElement = document.createElement('style')
-  contentElement = document.createElement('content-container')
-
-  // styles?(css: ParseCSS): string
-  // abstract template(html: ParseHTML): TemplateResult
+  // -- Attributes
 
   /**
-   * Changes in observed attributes trigger template changes.
+   * An object containing the Web Component's observed attribute definitions.
+   * Modifying a value in an observed attribute will invoke the Web Component's template function.
    * JSON serializable values are recommended e.g. number, string, objects, arrays.
    */
   static observedAttributes?: AttributeDefinitions
 
-  /** An object containing each observed attribute.
-   * Note that only existing attributes may be changed.
+  /** An object useed to get and set the value of each observed attributes.
+   * Attributes are accessed via `camelCase`, however they're aliased to their `dash-case` for convenience.
+   * Note that adding new attributes will not invoke template functions.
    */
   public observedAttributes = {} as WithAttributes<A>
 
@@ -67,6 +71,30 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
    * An internal cache containing attribute values.
    */
   private observedAttributesCache = {} as AttributeCache<A>
+
+  // -- Elements
+  /**
+   * An object containing the Web Component's element reference definitions.
+   * Each element definition should match its respective constructor e.g.
+   * ```js
+{
+  registrationForm: HTMLFormElement,
+  submitButton: HTMLInputElement
+}
+```
+  */
+  static elementsById?: ElementRefDefinitions
+
+  /**
+   * An object containing references to elements defined in the Web Component's template function.
+   * These references can be used to get and set values such as from `<input />` elements.
+   * Avoid tightly coupling logic with child Web Components. Instead, use the component's attributes to pass event listeners, allowing child component to handle it's own lifecycle.
+   * Element IDs are accessed via `camelCase`, however they're aliased to their `dash-case` ID for convenience.
+   */
+  public elementsById = {} as WithElementRefs<E>
+
+  styleElement = document.createElement('style')
+  contentElement = document.createElement('content-container')
 
   // -- Styles
 
@@ -232,7 +260,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     } else {
       value = value as string
 
-      const constructorParser = convertToObservedAttributeValue(Constructor)
+      // const constructorParser = convertToObservedAttributeValue(Constructor)
 
       if (Constructor === Object) {
         parsedValue = eval
@@ -330,7 +358,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
       }
     }
 
-    const clone = super.cloneNode(deepOrOptions.deep) as WebComponent<A>
+    const clone = super.cloneNode(deepOrOptions.deep) as WebComponent<A, E>
     clone.observedAttributesCache = deepExtend({}, this.observedAttributesCache) as WebComponent<
       A
     >['observedAttributesCache']
@@ -409,6 +437,38 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
 
     Object.seal(this.observedAttributes)
     Object.seal(this.observedAttributesCache)
+  }
+
+  private constructElementsById() {
+    const elementsById = this._constructor.elementsById || {}
+
+    const defineElementGetter = (propertyName: keyof E, elementId: string) => {
+      const propertyDescriptor: PropertyDescriptor = {
+        configurable: false,
+        // TODO: Setup cache with template render.
+        get: () => this.shadowRoot && this.shadowRoot.getElementById(elementId)
+      }
+
+      // Property lookup (AKA camelCase)
+      Object.defineProperty(this.elementsById, propertyName, {
+        ...propertyDescriptor,
+        enumerable: true
+      })
+
+      // Attribute lookup (AKA dash-case)
+      Object.defineProperty(this.elementsById, elementId, {
+        ...propertyDescriptor,
+        enumerable: false
+      })
+    }
+
+    for (let propertyName in elementsById) {
+      const elementId = camelToKebab(propertyName)
+
+      defineElementGetter(propertyName, elementId)
+    }
+
+    Object.seal(this.elementsById)
   }
 
   // Hack to fix TypeScript's lack of constructor inference.
@@ -502,13 +562,13 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
    * @param styles Stylesheet template
    * @param constructorScript Constructor function invoked when the Web Component is inserted in the document
    */
-  static define<A extends AttributeDefinitions = {}>(
+  static define<A extends AttributeDefinitions = {}, E extends ElementRefDefinitions = {}>(
     tagName: string,
-    template: WebComponent<A>['template'],
-    styles?: WebComponent<A>['styles'],
+    template: WebComponent<A, E>['template'],
+    styles?: WebComponent<A, E>['styles'],
     constructorScript?: WebComponentConstructorBody<A>
   ) {
-    const Constructor = class extends WebComponent<A> {
+    const Constructor = class extends WebComponent<A, E> {
       constructor(attributeDefinitions = {} as Partial<WithAttributes<A>>) {
         super(attributeDefinitions)
 
@@ -543,19 +603,23 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
 ```
    * Note that the `<script>` tag must always be the last child element.
    */
-  static defineFromElement<A extends AttributeDefinitions = any>(parentElement: Element) {
+  static defineFromElement<A extends AttributeDefinitions = {}, E extends ElementRefDefinitions = {}>(
+    parentElement: Element
+  ) {
     const tagName = parentElement.getAttribute('tag-name')
 
     if (!tagName) {
       throw new Error('Name attribute not provided. e.g. <web-component tag-name="my-element"></web-component>')
     }
 
-    let template: WebComponent<A>['template'] = function template(html) {
+    let template: WebComponent<A, E>['template'] = function template(html) {
       return html``
     }
-    let styles: WebComponent<A>['styles'] = function styles(css) {
+
+    let styles: WebComponent<A, E>['styles'] = function styles(css) {
       return css``
     }
+
     let constructorScript: WebComponentConstructorBody<A> = function WebComponentConstructor() {}
 
     for (let childElement of Array.from(parentElement.children)) {
@@ -589,11 +653,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
    * @param path URL path to web component definition e.g.
    * https://example.com/components/foo-bar.component.html
    */
-  static async defineFromSrc<A extends AttributeDefinitions = any>(path: string) {
-    if (typeof path !== 'string' || !path.endsWith('. component.html')) {
-      throw new Error('Path must end with `.component.html`')
-    }
-
+  static async defineFromSrc<A extends AttributeDefinitions = {}, E extends ElementRefDefinitions = {}>(path: string) {
     try {
       var response = await window.fetch(path)
 
@@ -619,7 +679,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     // TODO: support multiple definitions per file.
     // componentElements.forEach(componentElement => this.defineFromElement(componentElement))
 
-    return this.defineFromElement(componentElements[0])
+    return this.defineFromElement<A, E>(componentElements[0])
   }
 }
 

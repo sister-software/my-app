@@ -7,7 +7,7 @@ export interface AttributeDefinition<C = {}> {
   /**
    * A JSON friendly constructor function.
    */
-  type: (...args: any[]) => C
+  type: new (...args: any[]) => C
   defaultValue?: string | number | boolean | null | (() => any)
   required?: boolean
 }
@@ -39,7 +39,7 @@ export function createObservedAttributes<T extends AttributeDefinitions>(observe
   return observedAttributes
 }
 
-export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: ReturnType<AD[P]['type']> }
+export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: InstanceType<AD[P]['type']> }
 
 export type ValueOfAttributes<A> = { [P in keyof A]: P }
 
@@ -57,7 +57,12 @@ constructorMap.set(Function, (value: string) => eval(value))
 constructorMap.set(Object, (value: string) => eval(value))
 constructorMap.set(Array, (value: string) => eval(value))
 
-export function getConstructorParser<T extends ConstructorType>(
+/**
+ * Parses an attribute string value using a given constructor.
+ * While it's possible to
+ * @param Constructor A native built-in constructor e.g. `Number`, `String`
+ */
+export function convertToObservedAttributeValue<T extends ConstructorType>(
   Constructor: T
 ): ConstructorParser<ReturnType<T>> | null {
   return constructorMap.get(Constructor) || null

@@ -1,7 +1,16 @@
 import WebComponent, { ParseCSS, ParseHTML } from '../web-component.js'
 
-export default class MyButton extends WebComponent<typeof MyButton['observedAttributes']> {
+export default class MyButton extends WebComponent<
+  typeof MyButton['observedAttributes'],
+  typeof MyButton['elementsById']
+> {
   static observedAttributes = {
+    testerDate: {
+      type: Date
+    },
+    name: {
+      type: String
+    },
     clickCount: {
       defaultValue: 23,
       type: Number
@@ -9,14 +18,10 @@ export default class MyButton extends WebComponent<typeof MyButton['observedAttr
     }
   }
 
-  static get elementsById() {
-    return {
-      foo: HTMLDivElement
-    }
-  }
-
-  static get publicEvents() {
-    return {}
+  static elementsById = {
+    innerButton: HTMLButtonElement,
+    paragraph: HTMLParagraphElement,
+    box: MyButton
   }
 
   styles(css: ParseCSS) {
