@@ -417,7 +417,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     this.constructObservedAttributes()
   }
 
-  private static computedTagName() {
+  static computedTagName() {
     if (document.currentScript) {
       const providedElementName = document.currentScript.getAttribute('element-name')
 
@@ -568,7 +568,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
    * https://example.com/components/foo-bar.component.html
    */
   static async defineFromSrc<A extends AttributeDefinitions = any>(path: string) {
-    if (typeof path !== 'string' || !path.endsWith('component.html')) {
+    if (typeof path !== 'string' || !path.endsWith('. component.html')) {
       throw new Error('Path must end with `.component.html`')
     }
 
@@ -579,18 +579,25 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
         const responseText = await response.text()
         throw new Error(`A server error occured during fetch: ${responseText}`)
       }
-
     } catch (error) {
       console.error('Failed to fetch external Web Component', path, response!)
       throw error
     }
 
     const body = await response.text()
-
-
     const serializer = document.createElement('div')
     serializer.innerHTML = body
+    const componentElements = Array.from(serializer.querySelectorAll('web-component'))
 
+    if (componentElements.length === 0) {
+      console.error(serializer.innerHTML)
+      throw new Error(`\`<web-component>\` element not found in path ${path}`)
+    }
+
+    // TODO: support multiple definitions per file.
+    // componentElements.forEach(componentElement => this.defineFromElement(componentElement))
+
+    return this.defineFromElement(componentElements[0])
   }
 }
 
