@@ -3,15 +3,22 @@ import css from './helpers/parse-css.js'
 import camelToKebab from './helpers/camel-to-kebab.js'
 import kebabToCamel from './helpers/kebab-to-camel.js'
 import deepExtend from './helpers/deep-extend.js'
-import {AttributeDefinitions, WithAttributes, AttributeCache, ValueOfAttributes, AttributeOrigin, AttributeCacheEntry} from './web-component/attributes.js';
-import {LifeCycleHandler, LifeCycleEvents, WebComponentLifecycle} from './web-component/lifecycle.js';
+import {
+  AttributeDefinitions,
+  WithAttributes,
+  AttributeCache,
+  ValueOfAttributes,
+  AttributeOrigin,
+  AttributeCacheEntry,
+  convertToObservedAttributeValue
+} from './web-component/attributes.js'
+import { LifeCycleHandler, LifeCycleEvents, WebComponentLifecycle } from './web-component/lifecycle.js'
 
 // Reexport for developer convenience.
 export { css }
 export { html }
 export type ParseHTML = typeof html
 export type ParseCSS = typeof css
-
 
 interface SetAttributeOptions {
   origin: AttributeOrigin
@@ -21,7 +28,10 @@ export interface CustomElementOptions {
   shadowRoot: ShadowRootInit
 }
 
-export type WebComponentConstructorBody<A extends AttributeDefinitions = {}> = (this: WebComponent, attributeDefinitions?: Partial<WithAttributes<A>>) => void
+export type WebComponentConstructorBody<A extends AttributeDefinitions = {}> = (
+  this: WebComponent<A>,
+  attributeDefinitions?: Partial<WithAttributes<A>>
+) => void
 
 interface WebComponent<A extends AttributeDefinitions> {
   styles?(this: WebComponent<A>, css: ParseCSS): string
@@ -198,45 +208,50 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
   }
 
   setAttribute(
-    attributeName: string,
+    attributeName: keyof A | string,
     value: ValueOfAttributes<A> | string,
     options: SetAttributeOptions = {
-      'origin': 'setAttribute'
+      origin: 'setAttribute'
     }
   ) {
+    // Type Coercion
+    const attributeNameString = attributeName as string
+    const attributeNameKey = attributeName as keyof A
 
     if (!(attributeName in this.observedAttributes)) {
-      return super.setAttribute(attributeName, value as string)
+      return super.setAttribute(attributeNameString, value as string)
     }
 
-    const attributeCacheEntry = this.observedAttributesCache[attributeName]
+    const attributeCacheEntry = this.observedAttributesCache[attributeNameKey]
     const Constructor = attributeCacheEntry.type
     let parsedValue: any
-    let cssValue: string = ""
+    let cssValue: string = ''
 
-    // TODO: investigate cross-iframe concerns.
     if (value instanceof attributeCacheEntry.type) {
       parsedValue = value
     } else {
       value = value as string
 
+      const constructorParser = convertToObservedAttributeValue(Constructor)
+
+      if (Constructor === Object) {
+        parsedValue = eval
+      }
+
       switch (Constructor.name) {
         case 'Number':
         case 'Number':
-          super.setAttribute(attributeName, value)
-          break;
+          super.setAttribute(attributeNameString, JSON.stringify(value))
+          break
         case 'Object':
           parsedValue = eval(value)
-          super.setAttribute(attributeName, '[object Object]')
-        break;
-        case
-
+          super.setAttribute(attributeNameString, '[object Object]')
+          break
         default:
-        // parsedValue = new Constructor(value)
-        super.setAttribute(attributeName, `[object ${Constructor.name}]`)
-          break;
+          // parsedValue = new Constructor(value)
+          super.setAttribute(attributeNameString, `[object ${Constructor.name}]`)
+          break
       }
-
     }
 
     const parsedValueType = typeof parsedValue
@@ -250,22 +265,22 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
       if (parsedValue) {
         // Much like checkbox input elements,
         // boolean attributes are represented by their presence.
-        super.setAttribute(attributeName, '')
+        super.setAttribute(attributeNameString, '')
       } else {
-        super.removeAttribute(attributeName)
+        super.removeAttribute(attributeNameString)
       }
     } else if (Array.isArray(parsedValue)) {
       // parsedValue = this.createObservableArray(parsedValue)
-      super.setAttribute(attributeName, '[object Array]')
+      super.setAttribute(attributeNameString, '[object Array]')
     } else if (parsedValueType === 'object') {
       if (parsedValue) {
         // parsedValue = this.createObservableObject(parsedValue)
-        super.setAttribute(attributeName, parsedValue ? '[object Object]' : 'null')
+        super.setAttribute(attributeNameString, parsedValue ? '[object Object]' : 'null')
       } else {
-        super.setAttribute(attributeName, 'null')
+        super.setAttribute(attributeNameString, 'null')
       }
     } else {
-      super.setAttribute(attributeName, parsedValue as string)
+      super.setAttribute(attributeNameString, parsedValue as string)
     }
 
     attributeCacheEntry.value = parsedValue
@@ -275,26 +290,24 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     return value
   }
 
-  getAttribute(attributeName: keyof A & string): A[keyof A] | string | null {
-    const propertyName = kebabToCamel(attributeName) as keyof A
-
-    if (propertyName in this.observedAttributes) {
-      return this.observedAttributes[propertyName]
+  getAttribute(attributeName: keyof A | string): A[keyof A] | string | null {
+    if (attributeName in this.observedAttributes) {
+      return this.observedAttributes[attributeName as keyof A]
     }
 
-    return super.getAttribute(attributeName)
+    return super.getAttribute(attributeName as string)
   }
 
-  removeAttribute(attributeName: string) {
-    super.removeAttribute(attributeName)
+  removeAttribute(attributeName: keyof A | string) {
+    if (attributeName in this.observedAttributes) {
+      const attributeNameKey = attributeName as keyof A
+      const Constructor = this.observedAttributesCache[attributeNameKey].type
 
-    const propertyName = kebabToCamel(attributeName) as keyof A
-
-    if (propertyName in this.observedAttributes) {
-      const attributeCacheEntry = this.observedAttributes[propertyName]
-      if (typeof attributeCacheEntry.value === 'boolean') {
-        this.observedAttributes[propertyName] = false as any
-      }
+      this.setAttribute(attributeNameKey, Constructor === Boolean ? false : (null as any), {
+        origin: 'removeAttribute'
+      })
+    } else {
+      super.removeAttribute(attributeName as string)
     }
   }
 
@@ -403,7 +416,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     return this.constructor as typeof WebComponent
   }
 
-  constructor(attributeDefinitions = {} as Partial<WithAttributes<A>>) {
+  constructor(observedAttributes?: Partial<WithAttributes<A>>) {
     super()
 
     // -- Template lifecycle setup
@@ -415,6 +428,12 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
     shadowRoot.appendChild(this.contentElement)
 
     this.constructObservedAttributes()
+
+    if (observedAttributes) {
+      Object.keys(observedAttributes).forEach((attributeName: keyof WithAttributes<A>) => {
+        this.observedAttributes[attributeName] = observedAttributes[attributeName] as any
+      })
+    }
   }
 
   static computedTagName() {
@@ -531,12 +550,15 @@ abstract class WebComponent<A extends AttributeDefinitions = {}> extends HTMLEle
       throw new Error('Name attribute not provided. e.g. <web-component tag-name="my-element"></web-component>')
     }
 
-    let template: WebComponent<A>['template'] = function template (html) { return html`` }
-    let styles: WebComponent<A>['styles'] = function styles (css) { return css`` }
+    let template: WebComponent<A>['template'] = function template(html) {
+      return html``
+    }
+    let styles: WebComponent<A>['styles'] = function styles(css) {
+      return css``
+    }
     let constructorScript: WebComponentConstructorBody<A> = function WebComponentConstructor() {}
 
     for (let childElement of Array.from(parentElement.children)) {
-
       switch (childElement.nodeName) {
         case 'TEMPLATE':
           const serializer = document.createElement('div')

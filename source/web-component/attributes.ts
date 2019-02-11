@@ -16,7 +16,7 @@ export type AttributeDefinitions = {
   [attributeName: string]: AttributeDefinition
 }
 
-export type AttributeOrigin = 'setAttribute' | 'attributeChangedCallback' | 'propertyAccessor'
+export type AttributeOrigin = 'setAttribute' | 'removeAttribute' | 'attributeChangedCallback' | 'propertyAccessor'
 
 export interface AttributeCacheEntry<T = any> {
   attributeName: string
@@ -42,3 +42,23 @@ export function createObservedAttributes<T extends AttributeDefinitions>(observe
 export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: ReturnType<AD[P]['type']> }
 
 export type ValueOfAttributes<A> = { [P in keyof A]: P }
+
+export type ConstructorParser<T extends ConstructorType = any> = (value: string) => T
+
+type ConstructorType = (...args: any[]) => any
+const constructorMap = new Map<ConstructorType, ConstructorParser>()
+
+constructorMap.set(Boolean, (value: string) => Boolean(value))
+constructorMap.set(String, (value: string) => String(value))
+constructorMap.set(Number, (value: string) => Number(value))
+constructorMap.set(Date, (value: string) => new Date(value))
+constructorMap.set(Function, (value: string) => eval(value))
+// TODO: Use observerable objects.
+constructorMap.set(Object, (value: string) => eval(value))
+constructorMap.set(Array, (value: string) => eval(value))
+
+export function getConstructorParser<T extends ConstructorType>(
+  Constructor: T
+): ConstructorParser<ReturnType<T>> | null {
+  return constructorMap.get(Constructor) || null
+}
