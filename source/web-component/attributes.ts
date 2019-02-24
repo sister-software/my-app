@@ -16,6 +16,16 @@ export type AttributeDefinitions = {
   [attributeName: string]: AttributeDefinition
 }
 
+export const reservedDOMAttributes = {
+  id: true,
+  class: true,
+  style: true,
+  tabIndex: true,
+  title: true,
+  contentEditable: true,
+  lang: true
+}
+
 export type AttributeOrigin = 'setAttribute' | 'removeAttribute' | 'attributeChangedCallback' | 'propertyAccessor'
 
 export interface AttributeCacheEntry<T = any> {

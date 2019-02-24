@@ -9,7 +9,8 @@ import {
   ValueOfAttributes,
   AttributeOrigin,
   AttributeCacheEntry,
-  convertToObservedAttributeValue
+  convertToObservedAttributeValue,
+  reservedDOMAttributes
 } from './web-component/attributes.js'
 import { LifeCycleHandler, LifeCycleEvents, WebComponentLifecycle } from './web-component/lifecycle.js'
 
@@ -400,14 +401,22 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
         enumerable: true
       })
 
-      // Attribute lookup (AKA dash-case)
-      Object.defineProperty(this.observedAttributes, attributeName, {
-        ...propertyDescriptor,
-        enumerable: false
-      })
+      if (propertyName !== attributeName) {
+        // Attribute lookup (AKA dash-case)
+        Object.defineProperty(this.observedAttributes, attributeName, {
+          ...propertyDescriptor,
+          enumerable: false
+        })
+      }
     }
 
     for (let propertyName in attributeDefinitions) {
+      if (propertyName in reservedDOMAttributes) {
+        throw new Error(
+          `Web Component "${this._constructor.computedTagName()}" uses a reserved attribute "${propertyName}". Consider renaming the attribute in the component's \`observedAttributes\` declaration.`
+        )
+      }
+
       const attributeDefinition = attributeDefinitions[propertyName]
       const attributeName = camelToKebab(propertyName)
 
@@ -421,8 +430,10 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
       // Property lookup (AKA camelCase)
       this.observedAttributesCache[propertyName] = attributeCacheEntry
 
-      // Attribute lookup (AKA dash-case)
-      this.observedAttributesCache[attributeName] = attributeCacheEntry
+      if (propertyName !== attributeName) {
+        // Attribute lookup (AKA dash-case)
+        this.observedAttributesCache[attributeName] = attributeCacheEntry
+      }
 
       defineAttributeGetter(propertyName, attributeName)
 
