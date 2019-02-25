@@ -1,8 +1,11 @@
+import { Observable } from '../helpers/observables.js'
+
 type ConstructorType = new (...args: any[]) => any
 
 export type AttributeValue = number | string | boolean | Array<any> | object | null
 
 export type JSONParsableConstructor<T extends ConstructorType = any> = {
+  (...args: any[]): InstanceType<T>
   new (...args: any[]): InstanceType<T>
   toJSON?(): string
   fromJSON?(...args: any[]): InstanceType<T>
@@ -16,6 +19,7 @@ export interface AttributeDefinition<C extends ConstructorType = any> {
    * A JSON friendly constructor function.
    */
   type: JSONParsableConstructor<C>
+  // type: C
   defaultValue?: string | number | boolean | null | (() => any)
   required?: boolean
 }
@@ -57,7 +61,7 @@ export function createObservedAttributes<T extends AttributeDefinitions>(observe
   return observedAttributes
 }
 
-export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: InstanceType<AD[P]['type']> }
+export type WithAttributes<AD extends AttributeDefinitions> = { [P in keyof AD]: ReturnType<AD[P]['type']> }
 
 export type ValueOfAttributes<A> = { [P in keyof A]: P }
 
@@ -71,8 +75,8 @@ constructorMap.set(Number, (value: string) => Number(value))
 constructorMap.set(Date, (value: string) => new Date(value))
 constructorMap.set(Function, (value: string) => eval(value))
 // TODO: Use observerable objects.
-constructorMap.set(Object, (value: string) => eval(value))
-constructorMap.set(Array, (value: string) => eval(value))
+constructorMap.set(Object, (value: string) => Observable.from(eval(value)))
+constructorMap.set(Array, (value: string) => Observable.from(eval(value)))
 
 /**
  * Parses an attribute string value using a given constructor.

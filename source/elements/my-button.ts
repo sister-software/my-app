@@ -8,20 +8,24 @@ export default class MyButton extends WebComponent<
     testerDate: {
       type: Date
     },
-    name: {
+    color: {
       type: String
     },
     clickCount: {
       defaultValue: 23,
       type: Number
       // required: true
+    },
+    testArray: {
+      type: Array
     }
   }
 
   static elementsById = {
     innerButton: HTMLButtonElement,
     paragraph: HTMLParagraphElement,
-    box: MyButton
+    box: MyButton,
+    testing: HTMLDivElement
   }
 
   styles(css: ParseCSS) {
@@ -30,7 +34,7 @@ export default class MyButton extends WebComponent<
         font-family: sans-serif;
       }
       span {
-        color: red;
+        color: var(--observed-attribute-color, red);
       }
     `
   }
@@ -41,15 +45,19 @@ export default class MyButton extends WebComponent<
 
   clickHandler = (event: MouseEvent) => {
     console.log('hello', this, event)
-    ;(this.observedAttributes.clickCount as number) += 1
+    this.observedAttributes.clickCount += 1
+
+    console.log(this.elementsById.testing)
     // this.observedAttributes.disabled = true
   }
 
   template(html: ParseHTML) {
-    // const { clickCount } = this.observedAttributes
     return html`
       My Button goes here! <span @click=${this.clickHandler}>Click me!</span>
       <div id="testing">Clicked ${this.observedAttributes.clickCount} times.</div>
+      <div>
+        Array entries: ${this.observedAttributes.testArray && JSON.stringify(this.observedAttributes.testArray)}
+      </div>
       <slot></slot>
     `
   }

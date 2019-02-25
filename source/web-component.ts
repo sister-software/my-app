@@ -253,12 +253,13 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
     const attributeCacheEntry = this.observedAttributesCache[attributeName as keyof A]
     const Constructor = attributeCacheEntry.type
     let parsedValue: any
-    let stringifiedValue = ''
 
     // Skip identical values.
     if (value === attributeCacheEntry.value) return
 
-    if (value instanceof attributeCacheEntry.type) {
+    const isObservable = value instanceof Object || (value as unknown) instanceof Array
+
+    if (value instanceof attributeCacheEntry.type && !isObservable) {
       parsedValue = value
     } else {
       const constructorStringParser = getConstructorStringParser(Constructor)
@@ -266,6 +267,12 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
       if (constructorStringParser) {
         // Built in parser found.
         parsedValue = constructorStringParser(value as string)
+
+        if (typeof parsedValue.observe === 'function') {
+          parsedValue.observe(() => {
+            this._updateAttribute(attributeNameString, attributeCacheEntry.value)
+          })
+        }
       } else if (Constructor.fromJSON) {
         parsedValue = Constructor.fromJSON(value)
       } else {
@@ -274,41 +281,43 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
       }
     }
 
-    const parsedValueType = typeof parsedValue
-
     attributeCacheEntry.lastParseOrigin = options.origin
     attributeCacheEntry.value = parsedValue
 
-    if (parsedValueType === 'boolean') {
+    this._updateAttribute(attributeNameString, parsedValue)
+
+    return value
+  }
+
+  private _updateAttribute(attributeName: string, parsedValue: any) {
+    const parsedValueType = typeof parsedValue
+    let stringifiedValue = ''
+
+    if (parsedValueType === 'boolean' || parsedValue === '') {
       // Much like checkbox input elements, boolean attributes are represented by their presence.
       stringifiedValue = JSON.stringify(parsedValue)
 
       if (parsedValue) {
-        super.setAttribute(attributeNameString, '')
+        super.setAttribute(attributeName, '')
       } else {
-        super.removeAttribute(attributeNameString)
+        super.removeAttribute(attributeName)
       }
     } else if (parsedValueType === 'function') {
       stringifiedValue = String(parsedValue)
-      super.setAttribute(attributeNameString, stringifiedValue)
+      super.setAttribute(attributeName, stringifiedValue)
     } else if (Array.isArray(parsedValue)) {
-      // parsedValue = this.createObservableArray(parsedValue)
       stringifiedValue = JSON.stringify(parsedValue)
-      super.setAttribute(attributeNameString, stringifiedValue)
+      super.setAttribute(attributeName, stringifiedValue)
     } else if (parsedValueType === 'object') {
-      // parsedValue = this.createObservableObject(parsedValue)
       stringifiedValue = JSON.stringify(parsedValue)
-      super.setAttribute(attributeNameString, stringifiedValue)
+      super.setAttribute(attributeName, stringifiedValue)
     } else {
       stringifiedValue = JSON.stringify(parsedValue)
-      super.setAttribute(attributeNameString, stringifiedValue)
+      super.setAttribute(attributeName, stringifiedValue)
+      this.contentElement.style.setProperty(`--observed-attribute-${attributeName}`, parsedValue)
     }
 
-    this.contentElement.style.setProperty(`--observed-attribute-${attributeName}`, stringifiedValue)
-
     this.requestTemplateUpdate()
-
-    return value
   }
 
   getAttribute(attributeName: keyof A | string): A[keyof A] | string | null {
@@ -323,8 +332,15 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
     if (attributeName in this.observedAttributes) {
       const attributeNameKey = attributeName as keyof A
       const Constructor = this.observedAttributesCache[attributeNameKey].type
+      let nullValue: any = null
 
-      this.setAttribute(attributeNameKey, Constructor === Boolean ? false : (null as any), {
+      if (Constructor === Boolean) {
+        nullValue = false
+      } else if (Constructor === String) {
+        nullValue = ''
+      }
+
+      this.setAttribute(attributeNameKey, nullValue, {
         origin: 'removeAttribute'
       })
     } else {

@@ -14,4 +14,3 @@ if (document.readyState === 'loading') {
 } else {
   start()
 }
-console.log('foo')
