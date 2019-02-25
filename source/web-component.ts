@@ -469,11 +469,13 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
         enumerable: true
       })
 
-      // Attribute lookup (AKA dash-case)
-      Object.defineProperty(this.elementsById, elementId, {
-        ...propertyDescriptor,
-        enumerable: false
-      })
+      if (propertyName !== elementId) {
+        // Attribute lookup (AKA dash-case)
+        Object.defineProperty(this.elementsById, elementId, {
+          ...propertyDescriptor,
+          enumerable: false
+        })
+      }
     }
 
     for (let propertyName in elementsById) {
@@ -508,6 +510,8 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
         this.observedAttributes[attributeName] = observedAttributes[attributeName] as any
       })
     }
+
+    this.constructElementsById()
   }
 
   static computedTagName() {
