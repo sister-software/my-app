@@ -36,11 +36,12 @@ export default class MyButton extends WebComponent<
   }
 
   onafterupdate() {
-    console.log(this.tagName, 'update ran')
+    // console.log(this.tagName, 'update ran')
   }
 
   clickHandler = (event: MouseEvent) => {
     console.log('hello', this, event)
+    ;(this.observedAttributes.clickCount as number) += 1
     // this.observedAttributes.disabled = true
   }
 

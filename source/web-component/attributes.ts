@@ -1,13 +1,21 @@
+type ConstructorType = new (...args: any[]) => any
+
 export type AttributeValue = number | string | boolean | Array<any> | object | null
+
+export type JSONParsableConstructor<T extends ConstructorType = any> = {
+  new (...args: any[]): InstanceType<T>
+  toJSON?(): string
+  fromJSON?(...args: any[]): InstanceType<T>
+}
 
 /**
  * Configures the attribute's expected type and value.
  */
-export interface AttributeDefinition<C = {}> {
+export interface AttributeDefinition<C extends ConstructorType = any> {
   /**
    * A JSON friendly constructor function.
    */
-  type: new (...args: any[]) => C
+  type: JSONParsableConstructor<C>
   defaultValue?: string | number | boolean | null | (() => any)
   required?: boolean
 }
@@ -28,11 +36,11 @@ export const reservedDOMAttributes = {
 
 export type AttributeOrigin = 'setAttribute' | 'removeAttribute' | 'attributeChangedCallback' | 'propertyAccessor'
 
-export interface AttributeCacheEntry<T = any> {
+export interface AttributeCacheEntry<T extends ConstructorType = any> {
   attributeName: string
   type: AttributeDefinition<T>['type']
   value: T
-  origin: AttributeOrigin
+  lastParseOrigin: AttributeOrigin
 }
 
 export type AttributeCache<A> = { [P in keyof A]: AttributeCacheEntry }
@@ -55,7 +63,6 @@ export type ValueOfAttributes<A> = { [P in keyof A]: P }
 
 export type ConstructorParser<T extends ConstructorType = any> = (value: string) => T
 
-type ConstructorType = (...args: any[]) => any
 const constructorMap = new Map<ConstructorType, ConstructorParser>()
 
 constructorMap.set(Boolean, (value: string) => Boolean(value))
@@ -69,11 +76,12 @@ constructorMap.set(Array, (value: string) => eval(value))
 
 /**
  * Parses an attribute string value using a given constructor.
- * While it's possible to
+ * While it's possible to use a constructor directly, constructor parsers
+ * unify common string inputs with a single, predictable interface.
  * @param Constructor A native built-in constructor e.g. `Number`, `String`
  */
-export function convertToObservedAttributeValue<T extends ConstructorType>(
+export function getConstructorStringParser<T extends ConstructorType>(
   Constructor: T
-): ConstructorParser<ReturnType<T>> | null {
+): ConstructorParser<InstanceType<T>> | null {
   return constructorMap.get(Constructor) || null
 }

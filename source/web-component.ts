@@ -9,7 +9,7 @@ import {
   ValueOfAttributes,
   AttributeOrigin,
   AttributeCacheEntry,
-  convertToObservedAttributeValue,
+  getConstructorStringParser,
   reservedDOMAttributes
 } from './web-component/attributes.js'
 import { LifeCycleHandler, LifeCycleEvents, WebComponentLifecycle } from './web-component/lifecycle.js'
@@ -245,74 +245,66 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
   ) {
     // Type Coercion
     const attributeNameString = attributeName as string
-    const attributeNameKey = attributeName as keyof A
 
     if (!(attributeName in this.observedAttributes)) {
       return super.setAttribute(attributeNameString, value as string)
     }
 
-    const attributeCacheEntry = this.observedAttributesCache[attributeNameKey]
+    const attributeCacheEntry = this.observedAttributesCache[attributeName as keyof A]
     const Constructor = attributeCacheEntry.type
     let parsedValue: any
-    let cssValue: string = ''
+    let stringifiedValue = ''
+
+    // Skip identical values.
+    if (value === attributeCacheEntry.value) return
 
     if (value instanceof attributeCacheEntry.type) {
       parsedValue = value
     } else {
-      value = value as string
+      const constructorStringParser = getConstructorStringParser(Constructor)
 
-      // const constructorParser = convertToObservedAttributeValue(Constructor)
-
-      if (Constructor === Object) {
-        parsedValue = eval
-      }
-
-      switch (Constructor.name) {
-        case 'Number':
-        case 'Number':
-          super.setAttribute(attributeNameString, JSON.stringify(value))
-          break
-        case 'Object':
-          parsedValue = eval(value)
-          super.setAttribute(attributeNameString, '[object Object]')
-          break
-        default:
-          // parsedValue = new Constructor(value)
-          super.setAttribute(attributeNameString, `[object ${Constructor.name}]`)
-          break
+      if (constructorStringParser) {
+        // Built in parser found.
+        parsedValue = constructorStringParser(value as string)
+      } else if (Constructor.fromJSON) {
+        parsedValue = Constructor.fromJSON(value)
+      } else {
+        // Fallback to constructor arguments
+        parsedValue = new Constructor(value)
       }
     }
 
     const parsedValueType = typeof parsedValue
 
-    attributeCacheEntry.origin = options.origin
+    attributeCacheEntry.lastParseOrigin = options.origin
     attributeCacheEntry.value = parsedValue
-    this.contentElement.style.setProperty(`--observed-attribute-${attributeName}`, cssValue)
 
-    // TODO: fix attributeChanged loop.
     if (parsedValueType === 'boolean') {
+      // Much like checkbox input elements, boolean attributes are represented by their presence.
+      stringifiedValue = JSON.stringify(parsedValue)
+
       if (parsedValue) {
-        // Much like checkbox input elements,
-        // boolean attributes are represented by their presence.
         super.setAttribute(attributeNameString, '')
       } else {
         super.removeAttribute(attributeNameString)
       }
+    } else if (parsedValueType === 'function') {
+      stringifiedValue = String(parsedValue)
+      super.setAttribute(attributeNameString, stringifiedValue)
     } else if (Array.isArray(parsedValue)) {
       // parsedValue = this.createObservableArray(parsedValue)
-      super.setAttribute(attributeNameString, '[object Array]')
+      stringifiedValue = JSON.stringify(parsedValue)
+      super.setAttribute(attributeNameString, stringifiedValue)
     } else if (parsedValueType === 'object') {
-      if (parsedValue) {
-        // parsedValue = this.createObservableObject(parsedValue)
-        super.setAttribute(attributeNameString, parsedValue ? '[object Object]' : 'null')
-      } else {
-        super.setAttribute(attributeNameString, 'null')
-      }
+      // parsedValue = this.createObservableObject(parsedValue)
+      stringifiedValue = JSON.stringify(parsedValue)
+      super.setAttribute(attributeNameString, stringifiedValue)
     } else {
-      super.setAttribute(attributeNameString, parsedValue as string)
+      stringifiedValue = JSON.stringify(parsedValue)
+      super.setAttribute(attributeNameString, stringifiedValue)
     }
 
-    attributeCacheEntry.value = parsedValue
+    this.contentElement.style.setProperty(`--observed-attribute-${attributeName}`, stringifiedValue)
 
     this.requestTemplateUpdate()
 
@@ -341,7 +333,18 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
   }
 
   attributeChangedCallback(attributeName: string, previousValue: string, currentValue: string) {
-    console.log('change', attributeName, previousValue, currentValue)
+    if (!(attributeName in this.observedAttributes)) return
+
+    const attributeCacheEntry = this.observedAttributesCache[attributeName as keyof A]
+
+    if (attributeCacheEntry.lastParseOrigin !== 'attributeChangedCallback') {
+      attributeCacheEntry.lastParseOrigin = 'attributeChangedCallback'
+      return
+    }
+
+    this.setAttribute(attributeName, currentValue, {
+      origin: 'setAttribute'
+    })
   }
 
   get outerHTML() {
@@ -392,7 +395,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
       const propertyDescriptor: PropertyDescriptor = {
         configurable: false,
         get: () => this.observedAttributesCache[propertyName].value,
-        set: (value: ValueOfAttributes<A>) => this.setAttribute(propertyName as string, value)
+        set: (value: ValueOfAttributes<A>) => this.setAttribute(attributeName as string, value)
       }
 
       // Property lookup (AKA camelCase)
@@ -421,7 +424,7 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
       const attributeName = camelToKebab(propertyName)
 
       const attributeCacheEntry: AttributeCacheEntry = {
-        origin: 'propertyAccessor',
+        lastParseOrigin: 'propertyAccessor',
         type: attributeDefinition.type,
         attributeName,
         value: null
@@ -539,9 +542,11 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
     if (hasDefinedObservedAttributes) {
       delete this.observedAttributes
 
+      const attributeNames = Object.keys(originalObservedAttributes!).map(propertyName => camelToKebab(propertyName))
+
       Object.defineProperty(this, 'observedAttributes', {
         get() {
-          return Object.keys(originalObservedAttributes!)
+          return attributeNames
         },
         configurable: true
       })
