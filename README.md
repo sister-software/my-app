@@ -55,7 +55,7 @@ No Babel. No Webpack. Progressive Web Components let you build full web apps nat
     <!-- ...Or declare them as JavaScript classes for total control -->
 
     <script type="module">
-      import WebComponent from 'node_modules/@progressive-web-components/web-component.js`
+      import WebComponent from 'node_modules/@progressive-web-components/web-component.js'
       import moment from './node_modules/moment/moment.js'
 
       class HumanTime extends WebComponent {
@@ -72,7 +72,6 @@ No Babel. No Webpack. Progressive Web Components let you build full web apps nat
           this.interval = setInterval(() => {
             this.requestTemplateUpdate()
           }, 1000 * 60)
-
         }
 
         onbeforeremove() {
