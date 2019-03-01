@@ -15,6 +15,38 @@ globalStyles.innerHTML = `
 
 document.head.appendChild(globalStyles)
 
+export class ObservedAttribute extends HTMLElement {
+  static observedAttributes() {
+    return ['name', 'type', 'required']
+  }
+
+  get name() {
+    return this.getAttribute('name')
+  }
+
+  get type() {
+    return this.getAttribute('type')
+  }
+
+  get required() {
+    return !!this.getAttribute('required')
+  }
+
+  defaultValue() {
+    return this.innerHTML
+  }
+
+  get attributeDefinition() {
+    return {
+      type: this.type,
+      required: this.required,
+      defaultValue: this.defaultValue
+    }
+  }
+}
+
+window.customElements.define('observed-attribute', ObservedAttribute)
+
 let WebComponent: ReadyEvent['detail']['WebComponent'] | null = null
 const componentQueue: Element[] = []
 
