@@ -30,7 +30,7 @@ export interface ElementRefDefinitions {
 
 export type WithElementRefs<T extends ElementRefDefinitions> = { [P in keyof T]: InstanceType<T[P]> | null }
 
-export interface CustomElementOptions {
+export interface WebComponentOptions {
   shadowRoot: ShadowRootInit
 }
 
@@ -390,17 +390,17 @@ abstract class WebComponent<A extends AttributeDefinitions = {}, E extends Eleme
     return clone
   }
 
-  static get options(): Partial<CustomElementOptions> {
+  static get options(): Partial<WebComponentOptions> {
     return {}
   }
 
-  static get defaultOptions(): CustomElementOptions {
+  static get defaultOptions(): WebComponentOptions {
     return {
       shadowRoot: { mode: 'open' }
     }
   }
 
-  static get optionsWithDefaults(): CustomElementOptions {
+  static get optionsWithDefaults(): WebComponentOptions {
     return deepExtend(this.defaultOptions, this.options)
   }
 
