@@ -1,0 +1,185 @@
+<h1 id="progressive-web-components">Progressive Web Components</h1>
+<p><strong>Unreleased work in progress</strong></p>
+<p>No Babel. No Webpack. Progressive Web Components let you build full web apps native custom HTML elements.</p>
+<pre><code class="lang-css"><span class="hljs-selector-pseudo">:host</span> {
+  <span class="hljs-attribute">--primary-color-base</span>: <span class="hljs-number">#ff0000</span>;
+}
+</code></pre>
+<pre><code class="lang-html"><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"utf-8"</span> /&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"./theme.css"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text/my-app-theme"</span> /&gt;</span>
+    <span class="hljs-comment">&lt;!-- Add your modules as script tags. --&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/progressive-web-components/loader.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/@progressive-web-components/web-component.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- Declare your components with minimal JavaScript --&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">web-component</span> <span class="hljs-attr">tag-name</span>=<span class="hljs-string">"human-time"</span>&gt;</span>
+      <span class="hljs-tag">&lt;<span class="hljs-name">observed-attribute</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"date"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"number"</span> <span class="hljs-attr">required</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">observed-attribute</span>&gt;</span>
+
+      <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
+        <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"${this.observedAttributes.date}"</span>&gt;</span>${this.humanizedTime()}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
+      <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
+
+      <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span>&gt;</span><span class="javascript">
+        <span class="hljs-keyword">import</span> moment <span class="hljs-keyword">from</span> <span class="hljs-string">'./node_modules/moment/moment.js'</span>
+
+        <span class="hljs-keyword">this</span>.humanizedTime = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+          <span class="hljs-keyword">return</span> moment.fromNow(<span class="hljs-keyword">this</span>.observedAttributes.date)
+        }
+
+        <span class="hljs-keyword">this</span>.addEventListener(<span class="hljs-string">'afterInsert'</span>, () =&gt; {
+          <span class="hljs-keyword">this</span>.interval = setInterval(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-keyword">this</span>.requestTemplateUpdate()
+          }, <span class="hljs-number">1000</span> * <span class="hljs-number">60</span>)
+        })
+
+        <span class="hljs-keyword">this</span>.addEventListener(<span class="hljs-string">'beforeRemove'</span>, () =&gt; {
+          clearInterval(<span class="hljs-keyword">this</span>.interval)
+        })
+      </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+    <span class="hljs-tag">&lt;/<span class="hljs-name">web-component</span>&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- ...Or reference components in separate files --&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">web-component</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"/components/human-time.component.html"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">web-component</span>&gt;</span>
+
+    <span class="hljs-comment">&lt;!-- ...Or declare them as JavaScript classes for total control --&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span>&gt;</span><span class="javascript">
+      <span class="hljs-keyword">import</span> WebComponent <span class="hljs-keyword">from</span> <span class="hljs-string">'node_modules/@progressive-web-components/web-component.js'</span>
+      <span class="hljs-keyword">import</span> moment <span class="hljs-keyword">from</span> <span class="hljs-string">'./node_modules/moment/moment.js'</span>
+
+      <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HumanTime</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">WebComponent</span> </span>{
+        <span class="hljs-keyword">static</span> tagName = <span class="hljs-string">'human-time'</span>
+
+        <span class="hljs-keyword">static</span> observedAttributes = {
+          <span class="hljs-attr">date</span>: {
+            <span class="hljs-attr">type</span>: <span class="hljs-built_in">Date</span>,
+            <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>
+          }
+        }
+
+        onafterinsert() {
+          <span class="hljs-keyword">this</span>.interval = setInterval(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+            <span class="hljs-keyword">this</span>.requestTemplateUpdate()
+          }, <span class="hljs-number">1000</span> * <span class="hljs-number">60</span>)
+        }
+
+        onbeforeremove() {
+          clearInterval(<span class="hljs-keyword">this</span>.interval)
+        }
+
+        humanizedTime() {
+          <span class="hljs-keyword">return</span> moment.fromNow(<span class="hljs-keyword">this</span>.observedAttributes.date)
+        }
+
+        template(html) {
+          <span class="hljs-keyword">return</span> html<span class="hljs-string">`
+            &lt;span title="<span class="hljs-subst">${<span class="hljs-keyword">this</span>.observedAttributes.date}</span>"&gt;<span class="hljs-subst">${<span class="hljs-keyword">this</span>.humanizedTime()}</span>&lt;/span&gt;
+          `</span>
+        }
+      }
+    </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
+      <span class="hljs-comment">// ...Then natively import them — without a build step.</span>
+      <span class="hljs-keyword">import</span> MyApp <span class="hljs-keyword">from</span> <span class="hljs-string">'/vendor/my-app.js'</span>
+
+      <span class="hljs-comment">// Create native custom elements.</span>
+      MyApp.createElement(<span class="hljs-string">'todo-list-page'</span>, {
+        <span class="hljs-comment">// Element scoped styles.</span>
+        styles(css) {
+          css<span class="hljs-string">`
+            :host {
+              border: 1px dashed black;
+            }
+            .todos {
+              border: 1px solid black;
+            }
+          `</span>
+        },
+
+        <span class="hljs-attr">methods</span>: {
+          markTodoComplete(event) {
+            <span class="hljs-keyword">const</span> { todoId } = event.target.dataset
+
+            <span class="hljs-keyword">this</span>.parentApp.sharable.markTodoComplete(todoId)
+          }
+        },
+
+        render(html) {
+          <span class="hljs-keyword">const</span> { todos } = <span class="hljs-keyword">this</span>.parentApp.sharable
+
+          <span class="hljs-keyword">return</span> html<span class="hljs-string">`
+            &lt;div&gt;
+              &lt;h1&gt;Todo List&lt;/h1&gt;
+
+              &lt;ul class="todos"&gt;
+                <span class="hljs-subst">${
+                  todos.entries.map(
+                    todo =&gt; html<span class="hljs-string">`
+                      &lt;li onClick=<span class="hljs-subst">${<span class="hljs-keyword">this</span>.markTodoComplete}</span> data-todo-id=<span class="hljs-subst">${todo.id}</span>&gt;<span class="hljs-subst">${todo.title}</span>&lt;/li&gt;
+                    `</span>
+                  )
+                }</span>
+              &lt;/ul&gt;
+            &lt;/div&gt;
+          `</span>
+        }
+      })
+
+      <span class="hljs-keyword">const</span> myApp = <span class="hljs-keyword">new</span> MyApp({
+        <span class="hljs-comment">// Share global data with child nodes.</span>
+        sharable: {
+          <span class="hljs-attr">todos</span>: {
+            <span class="hljs-attr">entries</span>: [{ <span class="hljs-attr">id</span>: <span class="hljs-string">'abc123'</span>, <span class="hljs-attr">title</span>: <span class="hljs-string">'Try MyApp'</span>, <span class="hljs-attr">complete</span>: <span class="hljs-literal">true</span> }],
+            markTodoComplete(todoId) {
+              <span class="hljs-keyword">const</span> todo = <span class="hljs-keyword">this</span>.todos.find(<span class="hljs-function"><span class="hljs-params">todo</span> =&gt;</span> todo.id === todoId)
+              todo.complete = <span class="hljs-literal">true</span>
+            }
+          }
+        },
+        <span class="hljs-attr">routes</span>: {
+          <span class="hljs-comment">// Map routes to custom elements.</span>
+          <span class="hljs-string">'/'</span>: TodoListPage,
+          <span class="hljs-attr">login</span>: LoginPage
+        }
+      })
+
+      <span class="hljs-built_in">document</span>.body.appendChild(myApp)
+    </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+  <span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+
+  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</code></pre>
+<h2 id="theming-wip-">Theming (WIP)</h2>
+<pre><code class="lang-html"><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">rel</span>=<span class="hljs-string">"stylesheet"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text/css"</span> <span class="hljs-attr">media</span>=<span class="hljs-string">"screen"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"main.css"</span> /&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"material-button.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
+<span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">my-theme</span>&gt;</span>
+    <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
+      <span class="hljs-comment">/* Global theme variables. */</span>
+      <span class="hljs-selector-pseudo">:root</span> {
+        <span class="hljs-attribute">--font-size</span>: <span class="hljs-number">16px</span>;
+        <span class="hljs-attribute">--color</span>: <span class="hljs-number">#111</span>;
+      }
+
+      <span class="hljs-comment">/* Element overrides */</span>
+      <span class="hljs-selector-tag">material-button</span><span class="hljs-selector-pseudo">::part(text)</span> {
+        <span class="hljs-attribute">font-style</span>: italic;
+      }
+    </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
+
+    <span class="hljs-tag">&lt;<span class="hljs-name">material-button</span>&gt;</span>Click me!<span class="hljs-tag">&lt;/<span class="hljs-name">material-button</span>&gt;</span>
+  <span class="hljs-tag">&lt;<span class="hljs-name">my-theme</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
+<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
+</code></pre>
