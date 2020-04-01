@@ -1,196 +1,220 @@
-<!DOCTYPE html>
-<html lang="en">
+<html>
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>My App</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <style>
+      body {
+        background-color: antiquewhite;
+        font-family: Helvetica, sans-serif;
+        margin: 0;
+        padding: 5rem;
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/styles/solarized-light.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/9.18.1/highlight.min.js"></script>
+    <script>
+      hljs.initHighlightingOnLoad()
+    </script>
   </head>
   <body>
-    <h1 id="-my-app-"><code>&lt;my-app /&gt;</code></h1>
+    <h1 id="my-app"><code>&lt;my-app /&gt;</code></h1>
     <p><em>Progressive Web Components</em></p>
     <p><strong>Unreleased work in progress</strong></p>
-    <p>No Babel. No Webpack. Progressive Web Components let you build full web apps native custom HTML elements.</p>
-    <pre><code class="lang-css"><span class="hljs-selector-pseudo">:host</span> {
-  <span class="hljs-attribute">--primary-color-base</span>: <span class="hljs-number">#ff0000</span>;
-}
-</code></pre>
-    <pre><code class="lang-html"><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span>
-<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
-  <span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
-    <span class="hljs-tag">&lt;<span class="hljs-name">meta</span> <span class="hljs-attr">charset</span>=<span class="hljs-string">"utf-8"</span> /&gt;</span>
-    <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"./theme.css"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text/my-app-theme"</span> /&gt;</span>
-    <span class="hljs-comment">&lt;!-- Add your modules as script tags. --&gt;</span>
-    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/progressive-web-components/loader.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"https://unpkg.com/@progressive-web-components/web-component.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-
-    <span class="hljs-comment">&lt;!-- Declare your components with minimal JavaScript --&gt;</span>
-
-    <span class="hljs-tag">&lt;<span class="hljs-name">web-component</span> <span class="hljs-attr">tag-name</span>=<span class="hljs-string">"human-time"</span>&gt;</span>
-      <span class="hljs-tag">&lt;<span class="hljs-name">observed-attribute</span> <span class="hljs-attr">name</span>=<span class="hljs-string">"date"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"number"</span> <span class="hljs-attr">required</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">observed-attribute</span>&gt;</span>
-
-      <span class="hljs-tag">&lt;<span class="hljs-name">template</span>&gt;</span>
-        <span class="hljs-tag">&lt;<span class="hljs-name">span</span> <span class="hljs-attr">title</span>=<span class="hljs-string">"${this.observedAttributes.date}"</span>&gt;</span>${this.humanizedTime()}<span class="hljs-tag">&lt;/<span class="hljs-name">span</span>&gt;</span>
-      <span class="hljs-tag">&lt;/<span class="hljs-name">template</span>&gt;</span>
-
-      <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span>&gt;</span><span class="javascript">
-        <span class="hljs-keyword">import</span> moment <span class="hljs-keyword">from</span> <span class="hljs-string">'./node_modules/moment/moment.js'</span>
-
-        <span class="hljs-keyword">this</span>.humanizedTime = <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-          <span class="hljs-keyword">return</span> moment.fromNow(<span class="hljs-keyword">this</span>.observedAttributes.date)
-        }
-
-        <span class="hljs-keyword">this</span>.addEventListener(<span class="hljs-string">'afterInsert'</span>, () =&gt; {
-          <span class="hljs-keyword">this</span>.interval = setInterval(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-            <span class="hljs-keyword">this</span>.requestTemplateUpdate()
-          }, <span class="hljs-number">1000</span> * <span class="hljs-number">60</span>)
-        })
-
-        <span class="hljs-keyword">this</span>.addEventListener(<span class="hljs-string">'beforeRemove'</span>, () =&gt; {
-          clearInterval(<span class="hljs-keyword">this</span>.interval)
-        })
-      </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-    <span class="hljs-tag">&lt;/<span class="hljs-name">web-component</span>&gt;</span>
-
-    <span class="hljs-comment">&lt;!-- ...Or reference components in separate files --&gt;</span>
-
-    <span class="hljs-tag">&lt;<span class="hljs-name">web-component</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"/components/human-time.component.html"</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">web-component</span>&gt;</span>
-
-    <span class="hljs-comment">&lt;!-- ...Or declare them as JavaScript classes for total control --&gt;</span>
-
-    <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span>&gt;</span><span class="javascript">
-      <span class="hljs-keyword">import</span> WebComponent <span class="hljs-keyword">from</span> <span class="hljs-string">'node_modules/@progressive-web-components/web-component.js'</span>
-      <span class="hljs-keyword">import</span> moment <span class="hljs-keyword">from</span> <span class="hljs-string">'./node_modules/moment/moment.js'</span>
-
-      <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HumanTime</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">WebComponent</span> </span>{
-        <span class="hljs-keyword">static</span> tagName = <span class="hljs-string">'human-time'</span>
-
-        <span class="hljs-keyword">static</span> observedAttributes = {
-          <span class="hljs-attr">date</span>: {
-            <span class="hljs-attr">type</span>: <span class="hljs-built_in">Date</span>,
-            <span class="hljs-attr">required</span>: <span class="hljs-literal">true</span>
-          }
-        }
-
-        onafterinsert() {
-          <span class="hljs-keyword">this</span>.interval = setInterval(<span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
-            <span class="hljs-keyword">this</span>.requestTemplateUpdate()
-          }, <span class="hljs-number">1000</span> * <span class="hljs-number">60</span>)
-        }
-
-        onbeforeremove() {
-          clearInterval(<span class="hljs-keyword">this</span>.interval)
-        }
-
-        humanizedTime() {
-          <span class="hljs-keyword">return</span> moment.fromNow(<span class="hljs-keyword">this</span>.observedAttributes.date)
-        }
-
-        template(html) {
-          <span class="hljs-keyword">return</span> html<span class="hljs-string">`
-            &lt;span title="<span class="hljs-subst">${<span class="hljs-keyword">this</span>.observedAttributes.date}</span>"&gt;<span class="hljs-subst">${<span class="hljs-keyword">this</span>.humanizedTime()}</span>&lt;/span&gt;
-          `</span>
-        }
-      }
-    </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-
-    <span class="hljs-tag">&lt;<span class="hljs-name">script</span>&gt;</span><span class="javascript">
-      <span class="hljs-comment">// ...Then natively import them — without a build step.</span>
-      <span class="hljs-keyword">import</span> MyApp <span class="hljs-keyword">from</span> <span class="hljs-string">'/vendor/my-app.js'</span>
-
-      <span class="hljs-comment">// Create native custom elements.</span>
-      MyApp.createElement(<span class="hljs-string">'todo-list-page'</span>, {
-        <span class="hljs-comment">// Element scoped styles.</span>
-        styles(css) {
-          css<span class="hljs-string">`
-            :host {
-              border: 1px dashed black;
-            }
-            .todos {
-              border: 1px solid black;
-            }
-          `</span>
-        },
-
-        <span class="hljs-attr">methods</span>: {
-          markTodoComplete(event) {
-            <span class="hljs-keyword">const</span> { todoId } = event.target.dataset
-
-            <span class="hljs-keyword">this</span>.parentApp.sharable.markTodoComplete(todoId)
-          }
-        },
-
-        render(html) {
-          <span class="hljs-keyword">const</span> { todos } = <span class="hljs-keyword">this</span>.parentApp.sharable
-
-          <span class="hljs-keyword">return</span> html<span class="hljs-string">`
-            &lt;div&gt;
-              &lt;h1&gt;Todo List&lt;/h1&gt;
-
-              &lt;ul class="todos"&gt;
-                <span class="hljs-subst">${
-                  todos.entries.map(
-                    todo =&gt; html<span class="hljs-string">`
-                      &lt;li onClick=<span class="hljs-subst">${<span class="hljs-keyword">this</span>.markTodoComplete}</span> data-todo-id=<span class="hljs-subst">${todo.id}</span>&gt;<span class="hljs-subst">${todo.title}</span>&lt;/li&gt;
-                    `</span>
-                  )
-                }</span>
-              &lt;/ul&gt;
-            &lt;/div&gt;
-          `</span>
-        }
-      })
-
-      <span class="hljs-keyword">const</span> myApp = <span class="hljs-keyword">new</span> MyApp({
-        <span class="hljs-comment">// Share global data with child nodes.</span>
-        sharable: {
-          <span class="hljs-attr">todos</span>: {
-            <span class="hljs-attr">entries</span>: [{ <span class="hljs-attr">id</span>: <span class="hljs-string">'abc123'</span>, <span class="hljs-attr">title</span>: <span class="hljs-string">'Try MyApp'</span>, <span class="hljs-attr">complete</span>: <span class="hljs-literal">true</span> }],
-            markTodoComplete(todoId) {
-              <span class="hljs-keyword">const</span> todo = <span class="hljs-keyword">this</span>.todos.find(<span class="hljs-function"><span class="hljs-params">todo</span> =&gt;</span> todo.id === todoId)
-              todo.complete = <span class="hljs-literal">true</span>
-            }
-          }
-        },
-        <span class="hljs-attr">routes</span>: {
-          <span class="hljs-comment">// Map routes to custom elements.</span>
-          <span class="hljs-string">'/'</span>: TodoListPage,
-          <span class="hljs-attr">login</span>: LoginPage
-        }
-      })
-
-      <span class="hljs-built_in">document</span>.body.appendChild(myApp)
-    </span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-  <span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
-
-  <span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span><span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
-<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
-</code></pre>
-    <h2 id="theming-wip-">Theming (WIP)</h2>
-    <pre><code class="lang-html"><span class="hljs-meta">&lt;!DOCTYPE html&gt;</span>
-<span class="hljs-tag">&lt;<span class="hljs-name">html</span>&gt;</span>
-<span class="hljs-tag">&lt;<span class="hljs-name">head</span>&gt;</span>
-  <span class="hljs-tag">&lt;<span class="hljs-name">link</span> <span class="hljs-attr">rel</span>=<span class="hljs-string">"stylesheet"</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"text/css"</span> <span class="hljs-attr">media</span>=<span class="hljs-string">"screen"</span> <span class="hljs-attr">href</span>=<span class="hljs-string">"main.css"</span> /&gt;</span>
-  <span class="hljs-tag">&lt;<span class="hljs-name">script</span> <span class="hljs-attr">type</span>=<span class="hljs-string">"module"</span> <span class="hljs-attr">src</span>=<span class="hljs-string">"material-button.js"</span>&gt;</span><span class="undefined"></span><span class="hljs-tag">&lt;/<span class="hljs-name">script</span>&gt;</span>
-<span class="hljs-tag">&lt;/<span class="hljs-name">head</span>&gt;</span>
-<span class="hljs-tag">&lt;<span class="hljs-name">body</span>&gt;</span>
-  <span class="hljs-tag">&lt;<span class="hljs-name">my-theme</span>&gt;</span>
-    <span class="hljs-tag">&lt;<span class="hljs-name">style</span>&gt;</span><span class="css">
-      <span class="hljs-comment">/* Global theme variables. */</span>
-      <span class="hljs-selector-pseudo">:root</span> {
-        <span class="hljs-attribute">--font-size</span>: <span class="hljs-number">16px</span>;
-        <span class="hljs-attribute">--color</span>: <span class="hljs-number">#111</span>;
-      }
-
-      <span class="hljs-comment">/* Element overrides */</span>
-      <span class="hljs-selector-tag">material-button</span><span class="hljs-selector-pseudo">::part(text)</span> {
-        <span class="hljs-attribute">font-style</span>: italic;
-      }
-    </span><span class="hljs-tag">&lt;/<span class="hljs-name">style</span>&gt;</span>
-
-    <span class="hljs-tag">&lt;<span class="hljs-name">material-button</span>&gt;</span>Click me!<span class="hljs-tag">&lt;/<span class="hljs-name">material-button</span>&gt;</span>
-  <span class="hljs-tag">&lt;<span class="hljs-name">my-theme</span>&gt;</span>
-<span class="hljs-tag">&lt;/<span class="hljs-name">body</span>&gt;</span>
-<span class="hljs-tag">&lt;/<span class="hljs-name">html</span>&gt;</span>
-</code></pre>
+    <p>
+      No Babel. No Webpack. Progressive Web Components let you build full web apps native custom HTML elements.
+    </p>
+    <div class="sourceCode" id="cb1">
+      <pre
+        class="sourceCode css"
+      ><code class="sourceCode css"><span id="cb1-1"><a href="file:///Users/teffen/Projects/my-app/README.html#cb1-1"></a><span class="in">:host</span> {</span>
+<span id="cb1-2"><a href="file:///Users/teffen/Projects/my-app/README.html#cb1-2"></a>  <span class="va">--primary-color-base</span>: <span class="cn">#ff0000</span><span class="op">;</span></span>
+<span id="cb1-3"><a href="file:///Users/teffen/Projects/my-app/README.html#cb1-3"></a>}</span></code></pre>
+    </div>
+    <div class="sourceCode" id="cb2">
+      <pre
+        class="sourceCode html"
+      ><code class="sourceCode html"><span id="cb2-1"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-1"></a><span class="dt">&lt;!DOCTYPE </span>html<span class="dt">&gt;</span></span>
+<span id="cb2-2"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-2"></a><span class="kw">&lt;html&gt;</span></span>
+<span id="cb2-3"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-3"></a>  <span class="kw">&lt;head&gt;</span></span>
+<span id="cb2-4"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-4"></a>    <span class="kw">&lt;meta</span><span class="ot"> charset=</span><span class="st">"utf-8"</span> <span class="kw">/&gt;</span></span>
+<span id="cb2-5"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-5"></a>    <span class="kw">&lt;link</span><span class="ot"> src=</span><span class="st">"./theme.css"</span><span class="ot"> type=</span><span class="st">"text/my-app-theme"</span> <span class="kw">/&gt;</span></span>
+<span id="cb2-6"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-6"></a>    <span class="co">&lt;!-- Add your modules as script tags. --&gt;</span></span>
+<span id="cb2-7"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-7"></a>    <span class="kw">&lt;script</span><span class="ot"> src=</span><span class="st">"https://unpkg.com/progressive-web-components/loader.js"</span><span class="kw">&gt;&lt;/script&gt;</span></span>
+<span id="cb2-8"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-8"></a>    <span class="kw">&lt;script</span><span class="ot"> type=</span><span class="st">"module"</span><span class="ot"> src=</span><span class="st">"https://unpkg.com/@progressive-web-components/web-component.js"</span><span class="kw">&gt;&lt;/script&gt;</span></span>
+<span id="cb2-9"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-9"></a></span>
+<span id="cb2-10"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-10"></a>    <span class="co">&lt;!-- Declare your components with minimal JavaScript --&gt;</span></span>
+<span id="cb2-11"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-11"></a></span>
+<span id="cb2-12"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-12"></a>    <span class="kw">&lt;web-component</span><span class="ot"> tag-name=</span><span class="st">"human-time"</span><span class="kw">&gt;</span></span>
+<span id="cb2-13"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-13"></a>      <span class="kw">&lt;observed-attribute</span><span class="ot"> name=</span><span class="st">"date"</span><span class="ot"> type=</span><span class="st">"number"</span><span class="ot"> required</span><span class="kw">&gt;&lt;/observed-attribute&gt;</span></span>
+<span id="cb2-14"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-14"></a></span>
+<span id="cb2-15"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-15"></a>      <span class="kw">&lt;template&gt;</span></span>
+<span id="cb2-16"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-16"></a>        <span class="kw">&lt;span</span><span class="ot"> title=</span><span class="st">"${this.observedAttributes.date}"</span><span class="kw">&gt;</span>${this.humanizedTime()}<span class="kw">&lt;/span&gt;</span></span>
+<span id="cb2-17"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-17"></a>      <span class="kw">&lt;/template&gt;</span></span>
+<span id="cb2-18"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-18"></a></span>
+<span id="cb2-19"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-19"></a>      <span class="kw">&lt;script</span><span class="ot"> type=</span><span class="st">"module"</span><span class="kw">&gt;</span></span>
+<span id="cb2-20"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-20"></a>        <span class="im">import</span> moment <span class="im">from</span> <span class="st">'./node_modules/moment/moment.js'</span></span>
+<span id="cb2-21"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-21"></a></span>
+<span id="cb2-22"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-22"></a>        <span class="kw">this</span><span class="op">.</span><span class="at">humanizedTime</span> <span class="op">=</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-23"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-23"></a>          <span class="cf">return</span> moment<span class="op">.</span><span class="fu">fromNow</span>(<span class="kw">this</span><span class="op">.</span><span class="at">observedAttributes</span><span class="op">.</span><span class="at">date</span>)</span>
+<span id="cb2-24"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-24"></a>        }</span>
+<span id="cb2-25"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-25"></a></span>
+<span id="cb2-26"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-26"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">'afterInsert'</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-27"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-27"></a>          <span class="kw">this</span><span class="op">.</span><span class="at">interval</span> <span class="op">=</span> <span class="pp">setInterval</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb2-28"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-28"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">requestTemplateUpdate</span>()</span>
+<span id="cb2-29"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-29"></a>          }<span class="op">,</span> <span class="dv">1000</span> <span class="op">*</span> <span class="dv">60</span>)</span>
+<span id="cb2-30"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-30"></a>        })</span>
+<span id="cb2-31"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-31"></a></span>
+<span id="cb2-32"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-32"></a>        <span class="kw">this</span><span class="op">.</span><span class="fu">addEventListener</span>(<span class="st">'beforeRemove'</span><span class="op">,</span> () <span class="kw">=&gt;</span> {</span>
+<span id="cb2-33"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-33"></a>          <span class="pp">clearInterval</span>(<span class="kw">this</span><span class="op">.</span><span class="at">interval</span>)</span>
+<span id="cb2-34"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-34"></a>        })</span>
+<span id="cb2-35"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-35"></a>      <span class="kw">&lt;/script&gt;</span></span>
+<span id="cb2-36"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-36"></a>    <span class="kw">&lt;/web-component&gt;</span></span>
+<span id="cb2-37"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-37"></a></span>
+<span id="cb2-38"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-38"></a>    <span class="co">&lt;!-- ...Or reference components in separate files --&gt;</span></span>
+<span id="cb2-39"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-39"></a></span>
+<span id="cb2-40"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-40"></a>    <span class="kw">&lt;web-component</span><span class="ot"> src=</span><span class="st">"/components/human-time.component.html"</span><span class="kw">&gt;&lt;/web-component&gt;</span></span>
+<span id="cb2-41"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-41"></a></span>
+<span id="cb2-42"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-42"></a>    <span class="co">&lt;!-- ...Or declare them as JavaScript classes for total control --&gt;</span></span>
+<span id="cb2-43"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-43"></a></span>
+<span id="cb2-44"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-44"></a>    <span class="kw">&lt;script</span><span class="ot"> type=</span><span class="st">"module"</span><span class="kw">&gt;</span></span>
+<span id="cb2-45"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-45"></a>      <span class="im">import</span> WebComponent <span class="im">from</span> <span class="st">'node_modules/@progressive-web-components/web-component.js'</span></span>
+<span id="cb2-46"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-46"></a>      <span class="im">import</span> moment <span class="im">from</span> <span class="st">'./node_modules/moment/moment.js'</span></span>
+<span id="cb2-47"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-47"></a></span>
+<span id="cb2-48"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-48"></a>      <span class="kw">class</span> HumanTime <span class="kw">extends</span> WebComponent {</span>
+<span id="cb2-49"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-49"></a>        <span class="kw">static</span> tagName <span class="op">=</span> <span class="st">'human-time'</span></span>
+<span id="cb2-50"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-50"></a></span>
+<span id="cb2-51"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-51"></a>        <span class="kw">static</span> observedAttributes <span class="op">=</span> {</span>
+<span id="cb2-52"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-52"></a>          <span class="dt">date</span><span class="op">:</span> {</span>
+<span id="cb2-53"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-53"></a>            <span class="dt">type</span><span class="op">:</span> <span class="bu">Date</span><span class="op">,</span></span>
+<span id="cb2-54"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-54"></a>            <span class="dt">required</span><span class="op">:</span> <span class="kw">true</span></span>
+<span id="cb2-55"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-55"></a>          }</span>
+<span id="cb2-56"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-56"></a>        }</span>
+<span id="cb2-57"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-57"></a></span>
+<span id="cb2-58"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-58"></a>        onafterinsert() {</span>
+<span id="cb2-59"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-59"></a>          <span class="kw">this</span><span class="op">.</span><span class="at">interval</span> <span class="op">=</span> <span class="pp">setInterval</span>(() <span class="kw">=&gt;</span> {</span>
+<span id="cb2-60"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-60"></a>            <span class="kw">this</span><span class="op">.</span><span class="fu">requestTemplateUpdate</span>()</span>
+<span id="cb2-61"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-61"></a>          }<span class="op">,</span> <span class="dv">1000</span> <span class="op">*</span> <span class="dv">60</span>)</span>
+<span id="cb2-62"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-62"></a>        }</span>
+<span id="cb2-63"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-63"></a></span>
+<span id="cb2-64"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-64"></a>        onbeforeremove() {</span>
+<span id="cb2-65"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-65"></a>          <span class="pp">clearInterval</span>(<span class="kw">this</span><span class="op">.</span><span class="at">interval</span>)</span>
+<span id="cb2-66"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-66"></a>        }</span>
+<span id="cb2-67"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-67"></a></span>
+<span id="cb2-68"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-68"></a>        humanizedTime() {</span>
+<span id="cb2-69"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-69"></a>          <span class="cf">return</span> moment<span class="op">.</span><span class="fu">fromNow</span>(<span class="kw">this</span><span class="op">.</span><span class="at">observedAttributes</span><span class="op">.</span><span class="at">date</span>)</span>
+<span id="cb2-70"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-70"></a>        }</span>
+<span id="cb2-71"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-71"></a></span>
+<span id="cb2-72"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-72"></a>        template(html) {</span>
+<span id="cb2-73"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-73"></a>          <span class="cf">return</span> html<span class="vs">`</span></span>
+<span id="cb2-74"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-74"></a><span class="vs">            &lt;span title="</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">observedAttributes</span><span class="op">.</span><span class="at">date</span><span class="sc">}</span><span class="vs">"&gt;</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="fu">humanizedTime</span>()<span class="sc">}</span><span class="vs">&lt;/span&gt;</span></span>
+<span id="cb2-75"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-75"></a><span class="vs">          `</span></span>
+<span id="cb2-76"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-76"></a>        }</span>
+<span id="cb2-77"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-77"></a>      }</span>
+<span id="cb2-78"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-78"></a>    <span class="kw">&lt;/script&gt;</span></span>
+<span id="cb2-79"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-79"></a></span>
+<span id="cb2-80"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-80"></a>    <span class="kw">&lt;script&gt;</span></span>
+<span id="cb2-81"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-81"></a>      <span class="co">// ...Then natively import them — without a build step.</span></span>
+<span id="cb2-82"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-82"></a>      <span class="im">import</span> MyApp <span class="im">from</span> <span class="st">'/vendor/my-app.js'</span></span>
+<span id="cb2-83"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-83"></a></span>
+<span id="cb2-84"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-84"></a>      <span class="co">// Create native custom elements.</span></span>
+<span id="cb2-85"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-85"></a>      MyApp<span class="op">.</span><span class="fu">createElement</span>(<span class="st">'todo-list-page'</span><span class="op">,</span> {</span>
+<span id="cb2-86"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-86"></a>        <span class="co">// Element scoped styles.</span></span>
+<span id="cb2-87"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-87"></a>        styles(css) {</span>
+<span id="cb2-88"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-88"></a>          css<span class="vs">`</span></span>
+<span id="cb2-89"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-89"></a><span class="vs">            :host {</span></span>
+<span id="cb2-90"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-90"></a><span class="vs">              border: 1px dashed black;</span></span>
+<span id="cb2-91"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-91"></a><span class="vs">            }</span></span>
+<span id="cb2-92"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-92"></a><span class="vs">            .todos {</span></span>
+<span id="cb2-93"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-93"></a><span class="vs">              border: 1px solid black;</span></span>
+<span id="cb2-94"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-94"></a><span class="vs">            }</span></span>
+<span id="cb2-95"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-95"></a><span class="vs">          `</span></span>
+<span id="cb2-96"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-96"></a>        }<span class="op">,</span></span>
+<span id="cb2-97"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-97"></a></span>
+<span id="cb2-98"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-98"></a>        <span class="dt">methods</span><span class="op">:</span> {</span>
+<span id="cb2-99"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-99"></a>          markTodoComplete(<span class="bu">event</span>) {</span>
+<span id="cb2-100"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-100"></a>            <span class="kw">const</span> { todoId } <span class="op">=</span> <span class="bu">event</span><span class="op">.</span><span class="at">target</span><span class="op">.</span><span class="at">dataset</span></span>
+<span id="cb2-101"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-101"></a></span>
+<span id="cb2-102"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-102"></a>            <span class="kw">this</span><span class="op">.</span><span class="at">parentApp</span><span class="op">.</span><span class="at">sharable</span><span class="op">.</span><span class="fu">markTodoComplete</span>(todoId)</span>
+<span id="cb2-103"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-103"></a>          }</span>
+<span id="cb2-104"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-104"></a>        }<span class="op">,</span></span>
+<span id="cb2-105"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-105"></a></span>
+<span id="cb2-106"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-106"></a>        render(html) {</span>
+<span id="cb2-107"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-107"></a>          <span class="kw">const</span> { todos } <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">parentApp</span><span class="op">.</span><span class="at">sharable</span></span>
+<span id="cb2-108"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-108"></a></span>
+<span id="cb2-109"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-109"></a>          <span class="cf">return</span> html<span class="vs">`</span></span>
+<span id="cb2-110"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-110"></a><span class="vs">            &lt;div&gt;</span></span>
+<span id="cb2-111"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-111"></a><span class="vs">              &lt;h1&gt;Todo List&lt;/h1&gt;</span></span>
+<span id="cb2-112"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-112"></a></span>
+<span id="cb2-113"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-113"></a><span class="vs">              &lt;ul class="todos"&gt;</span></span>
+<span id="cb2-114"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-114"></a><span class="vs">                </span><span class="sc">${</span></span>
+<span id="cb2-115"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-115"></a>                  todos<span class="op">.</span><span class="at">entries</span><span class="op">.</span><span class="fu">map</span>(</span>
+<span id="cb2-116"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-116"></a>                    todo <span class="kw">=&gt;</span> html<span class="vs">`</span></span>
+<span id="cb2-117"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-117"></a><span class="vs">                      &lt;li onClick=</span><span class="sc">${</span><span class="kw">this</span><span class="op">.</span><span class="at">markTodoComplete</span><span class="sc">}</span><span class="vs"> data-todo-id=</span><span class="sc">${</span>todo<span class="op">.</span><span class="at">id</span><span class="sc">}</span><span class="vs">&gt;</span><span class="sc">${</span>todo<span class="op">.</span><span class="at">title</span><span class="sc">}</span><span class="vs">&lt;/li&gt;</span></span>
+<span id="cb2-118"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-118"></a><span class="vs">                    `</span></span>
+<span id="cb2-119"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-119"></a>                  )</span>
+<span id="cb2-120"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-120"></a>                <span class="sc">}</span></span>
+<span id="cb2-121"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-121"></a><span class="vs">              &lt;/ul&gt;</span></span>
+<span id="cb2-122"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-122"></a><span class="vs">            &lt;/div&gt;</span></span>
+<span id="cb2-123"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-123"></a><span class="vs">          `</span></span>
+<span id="cb2-124"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-124"></a>        }</span>
+<span id="cb2-125"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-125"></a>      })</span>
+<span id="cb2-126"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-126"></a></span>
+<span id="cb2-127"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-127"></a>      <span class="kw">const</span> myApp <span class="op">=</span> <span class="kw">new</span> MyApp({</span>
+<span id="cb2-128"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-128"></a>        <span class="co">// Share global data with child nodes.</span></span>
+<span id="cb2-129"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-129"></a>        <span class="dt">sharable</span><span class="op">:</span> {</span>
+<span id="cb2-130"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-130"></a>          <span class="dt">todos</span><span class="op">:</span> {</span>
+<span id="cb2-131"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-131"></a>            <span class="dt">entries</span><span class="op">:</span> [{ <span class="dt">id</span><span class="op">:</span> <span class="st">'abc123'</span><span class="op">,</span> <span class="dt">title</span><span class="op">:</span> <span class="st">'Try MyApp'</span><span class="op">,</span> <span class="dt">complete</span><span class="op">:</span> <span class="kw">true</span> }]<span class="op">,</span></span>
+<span id="cb2-132"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-132"></a>            markTodoComplete(todoId) {</span>
+<span id="cb2-133"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-133"></a>              <span class="kw">const</span> todo <span class="op">=</span> <span class="kw">this</span><span class="op">.</span><span class="at">todos</span><span class="op">.</span><span class="fu">find</span>(todo <span class="kw">=&gt;</span> todo<span class="op">.</span><span class="at">id</span> <span class="op">===</span> todoId)</span>
+<span id="cb2-134"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-134"></a>              todo<span class="op">.</span><span class="at">complete</span> <span class="op">=</span> <span class="kw">true</span></span>
+<span id="cb2-135"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-135"></a>            }</span>
+<span id="cb2-136"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-136"></a>          }</span>
+<span id="cb2-137"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-137"></a>        }<span class="op">,</span></span>
+<span id="cb2-138"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-138"></a>        <span class="dt">routes</span><span class="op">:</span> {</span>
+<span id="cb2-139"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-139"></a>          <span class="co">// Map routes to custom elements.</span></span>
+<span id="cb2-140"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-140"></a>          <span class="st">'/'</span><span class="op">:</span> TodoListPage<span class="op">,</span></span>
+<span id="cb2-141"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-141"></a>          <span class="dt">login</span><span class="op">:</span> LoginPage</span>
+<span id="cb2-142"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-142"></a>        }</span>
+<span id="cb2-143"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-143"></a>      })</span>
+<span id="cb2-144"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-144"></a></span>
+<span id="cb2-145"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-145"></a>      <span class="bu">document</span><span class="op">.</span><span class="at">body</span><span class="op">.</span><span class="fu">appendChild</span>(myApp)</span>
+<span id="cb2-146"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-146"></a>    <span class="kw">&lt;/script&gt;</span></span>
+<span id="cb2-147"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-147"></a>  <span class="kw">&lt;/head&gt;</span></span>
+<span id="cb2-148"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-148"></a></span>
+<span id="cb2-149"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-149"></a>  <span class="kw">&lt;body&gt;&lt;/body&gt;</span></span>
+<span id="cb2-150"><a href="file:///Users/teffen/Projects/my-app/README.html#cb2-150"></a><span class="kw">&lt;/html&gt;</span></span></code></pre>
+    </div>
+    <h2 id="theming-wip">Theming (WIP)</h2>
+    <div class="sourceCode" id="cb3">
+      <pre
+        class="sourceCode html"
+      ><code class="sourceCode html"><span id="cb3-1"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-1"></a><span class="dt">&lt;!DOCTYPE </span>html<span class="dt">&gt;</span></span>
+<span id="cb3-2"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-2"></a><span class="kw">&lt;html&gt;</span></span>
+<span id="cb3-3"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-3"></a><span class="kw">&lt;head&gt;</span></span>
+<span id="cb3-4"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-4"></a>  <span class="kw">&lt;link</span><span class="ot"> rel=</span><span class="st">"stylesheet"</span><span class="ot"> type=</span><span class="st">"text/css"</span><span class="ot"> media=</span><span class="st">"screen"</span><span class="ot"> href=</span><span class="st">"main.css"</span> <span class="kw">/&gt;</span></span>
+<span id="cb3-5"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-5"></a>  <span class="kw">&lt;script</span><span class="ot"> type=</span><span class="st">"module"</span><span class="ot"> src=</span><span class="st">"material-button.js"</span><span class="kw">&gt;&lt;/script&gt;</span></span>
+<span id="cb3-6"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-6"></a><span class="kw">&lt;/head&gt;</span></span>
+<span id="cb3-7"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-7"></a><span class="kw">&lt;body&gt;</span></span>
+<span id="cb3-8"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-8"></a>  <span class="kw">&lt;my-theme&gt;</span></span>
+<span id="cb3-9"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-9"></a>    <span class="kw">&lt;style&gt;</span></span>
+<span id="cb3-10"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-10"></a>      <span class="co">/* Global theme variables. */</span></span>
+<span id="cb3-11"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-11"></a>      <span class="in">:root</span> {</span>
+<span id="cb3-12"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-12"></a>        <span class="va">--font-size</span>: <span class="dv">16</span><span class="dt">px</span><span class="op">;</span></span>
+<span id="cb3-13"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-13"></a>        <span class="va">--color</span>: <span class="cn">#111</span><span class="op">;</span></span>
+<span id="cb3-14"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-14"></a>      }</span>
+<span id="cb3-15"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-15"></a></span>
+<span id="cb3-16"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-16"></a>      <span class="co">/* Element overrides */</span></span>
+<span id="cb3-17"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-17"></a>      material-button<span class="in">::part(text)</span> {</span>
+<span id="cb3-18"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-18"></a>        <span class="kw">font-style</span>: <span class="dv">italic</span><span class="op">;</span></span>
+<span id="cb3-19"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-19"></a>      }</span>
+<span id="cb3-20"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-20"></a>    <span class="kw">&lt;/style&gt;</span></span>
+<span id="cb3-21"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-21"></a></span>
+<span id="cb3-22"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-22"></a>    <span class="kw">&lt;material-button&gt;</span>Click me!<span class="kw">&lt;/material-button&gt;</span></span>
+<span id="cb3-23"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-23"></a>  <span class="kw">&lt;my-theme&gt;</span></span>
+<span id="cb3-24"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-24"></a><span class="kw">&lt;/body&gt;</span></span>
+<span id="cb3-25"><a href="file:///Users/teffen/Projects/my-app/README.html#cb3-25"></a><span class="kw">&lt;/html&gt;</span></span></code></pre>
+    </div>
   </body>
 </html>
