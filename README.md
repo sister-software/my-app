@@ -1,4 +1,6 @@
-# Progressive Web Components
+# `<my-app />`
+
+_Progressive Web Components_
 
 **Unreleased work in progress**
 
